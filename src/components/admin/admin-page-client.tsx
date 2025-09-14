@@ -56,36 +56,36 @@ export default function AdminPageClient() {
   const [itemToDelete, setItemToDelete] = useState<{ subjectId: string; type: 'note' | 'quiz' | 'test'; item: Note | Quiz | Test; } | null>(null);
 
   const handleContentAdded = (type: 'note' | 'quiz' | 'test', content: any) => {
-    addContent(content.subjectId, type, content);
-  
-    const classInfo = classes.find((c) => c.id === content.classId);
-    const subjectInfo = subjects.find((s) => s.id === content.subjectId);
-  
-    let activityType: keyof typeof activityIcons | undefined;
-    let activityTitle: string = content.title;
-    
-    switch (type) {
-      case 'note':
-        activityType = 'Added Note';
-        break;
-      case 'quiz':
-        activityType = 'Added Quiz';
-        break;
-      case 'test':
-        activityType = 'Added Test';
-        break;
-    }
-  
-    if (activityType) {
-      addActivity({
-        type: activityType,
-        title: activityTitle,
-        subject: subjectInfo?.name || 'Unknown',
-        class: classInfo?.id || 'Unknown',
-        timestamp: new Date(),
-        fileUrl: type === 'note' ? content.fileUrl : null,
-      });
-    }
+    addContent(content.subjectId, type, content).then(() => {
+        const classInfo = classes.find((c) => c.id === content.classId);
+        const subjectInfo = subjects.find((s) => s.id === content.subjectId);
+      
+        let activityType: keyof typeof activityIcons | undefined;
+        let activityTitle: string = content.title;
+        
+        switch (type) {
+          case 'note':
+            activityType = 'Added Note';
+            break;
+          case 'quiz':
+            activityType = 'Added Quiz';
+            break;
+          case 'test':
+            activityType = 'Added Test';
+            break;
+        }
+      
+        if (activityType && subjectInfo && classInfo) {
+          addActivity({
+            type: activityType,
+            title: activityTitle,
+            subject: subjectInfo.name,
+            class: classInfo.id,
+            timestamp: new Date(),
+            fileUrl: type === 'note' ? content.fileUrl : null,
+          });
+        }
+    });
   };
   
   const handleDelete = () => {
@@ -299,9 +299,9 @@ export default function AdminPageClient() {
                           <Button variant="outline" size="sm" onClick={() => downloadFile(activity.fileUrl!, activity.title)}>
                               <ExternalLink className="mr-2 h-4 w-4" /> View
                           </Button>
-                        ) : activity.type === 'Completed Quiz' && (activity.id as string).startsWith('attempt-') ? (
+                        ) : activity.type === 'Completed Quiz' ? (
                           <Button asChild variant="outline" size="sm">
-                            <Link href={`/quiz/result/${activity.id}`}>
+                            <Link href={`/quiz/result/${(quizAttempts.find(a => a.timestamp.getTime() === activity.timestamp.getTime() && a.studentName === 'Student' ) || {id:''}).id}`}>
                                <ExternalLink className="mr-2 h-4 w-4" /> View Result
                             </Link>
                           </Button>

@@ -49,11 +49,11 @@ export type SubjectContent = {
 };
 export type ContentData = Record<string, SubjectContent>;
 
-const initialContentData: ContentData = {
-  mathematics: { notes: [], quizzes: [], tests: [] },
-  science: { notes: [], quizzes: [], tests: [] },
-  'social-science': { notes: [], quizzes: [], tests: [] },
-};
+const initialContentData: ContentData = subjects.reduce((acc, subject) => {
+    acc[subject.id] = { notes: [], quizzes: [], tests: [] };
+    return acc;
+}, {} as ContentData);
+
 const initialPricing: Pricing = { notePriceInr: 830, quizPriceInr: 1245 };
 
 
@@ -136,8 +136,8 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const { upsert: upsertSession, getDoc: getSessionDoc, deleteDoc: deleteSessionDoc } = useFirestoreDocument('sessions', 'dummy', {}, UserSessionSchema);
 
   const setPricing = useCallback(async (newPricing: Pricing) => {
-    await updatePricingData(newPricing);
-  },[updatePricingData]);
+    await upsertSession('default', newPricing); // pricing is a singleton document
+  },[upsertSession]);
 
 
   const contentData = subjects.reduce((acc, subject) => {
@@ -163,13 +163,18 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     if (!currentSessionId) return false;
 
     const sessionDoc = await getSessionDoc(userId);
-    if (!sessionDoc) return false;
+    if (!sessionDoc) {
+      // This can happen if the doc is deleted on logout.
+      // We'll treat this as an invalid session to force a logout on the old device.
+      return false;
+    }
     
     return sessionDoc.activeSessionId === currentSessionId;
   }, [getSessionDoc]);
 
   const endUserSession = useCallback(async (userId: string) => {
     sessionStorage.removeItem('session_id');
+    // Deleting the session doc ensures other devices know the session is terminated.
     await deleteSessionDoc(userId);
   }, [deleteSessionDoc]);
 
@@ -186,11 +191,8 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   }, [updateNotification]);
 
   const markAllNotificationsAsRead = useCallback(async () => {
-    notifications.forEach(async (n) => {
-        if (!n.read) {
-            await updateNotification(n.id, { read: true });
-        }
-    });
+    const unreadNotifications = notifications.filter(n => !n.read);
+    await Promise.all(unreadNotifications.map(n => updateNotification(n.id, { read: true })));
   }, [notifications, updateNotification]);
 
   const addContent = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', data: any) => {
@@ -207,12 +209,14 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     const subject = subjects.find(s => s.id === subjectId);
     const classInfo = classes.find(c => c.id === data.classId);
     
-    await addNotification({
-        title: `New ${type} added!`,
-        message: `A new ${type} "${data.title}" has been added to ${subject?.name} for ${classInfo?.name}.`,
-        classId: data.classId,
-        subjectId: subjectId,
-    });
+    if(subject && classInfo) {
+      await addNotification({
+          title: `New ${type} added!`,
+          message: `A new ${type} "${data.title}" has been added to ${subject.name} for ${classInfo.name}.`,
+          classId: data.classId,
+          subjectId: subjectId,
+      });
+    }
 
     return result;
   }, [addNote, addQuiz, addTest, addNotification]);
@@ -227,21 +231,26 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   
   const handleAddQuizAttempt = useCallback(async (attempt: Omit<QuizAttempt, 'id'>) => {
     const newAttempt = await addQuizAttempt(attempt) as QuizAttempt;
-    const quiz = quizzes.find(q => q.id === attempt.quizId);
+    // The quiz might not be in the state yet if it was just added. Re-fetch all quizzes.
+    const allQuizzes = [...quizzes, ...(contentData[newAttempt.quizId as keyof typeof contentData]?.quizzes || [])];
+    const quiz = allQuizzes.find(q => q.id === attempt.quizId);
+
     if (quiz) {
         const subject = subjects.find(s => s.id === quiz.subjectId);
         const classInfo = classes.find(c => c.id === quiz.classId);
-        await addActivity({
-            type: 'Completed Quiz',
-            title: quiz.title,
-            subject: subject?.name || 'Unknown',
-            class: classInfo?.id || 'Unknown',
-            timestamp: new Date(),
-            fileUrl: null
-        });
+        if (subject && classInfo) {
+             addActivity({
+                type: 'Completed Quiz',
+                title: quiz.title,
+                subject: subject.name,
+                class: classInfo.id,
+                timestamp: new Date(),
+                fileUrl: null
+            });
+        }
     }
     return newAttempt;
-  }, [addQuizAttempt, quizzes, addActivity]);
+  }, [addQuizAttempt, quizzes, contentData, addActivity]);
   
   const addFeedback = useCallback(async (feedbackData: Omit<Feedback, 'id' | 'timestamp'>) => {
     return addFeedbackFirestore({ ...feedbackData, timestamp: new Date() });

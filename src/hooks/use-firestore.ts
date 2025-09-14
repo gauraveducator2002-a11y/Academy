@@ -11,7 +11,6 @@ import {
   Timestamp,
   updateDoc,
   addDoc,
-  getDocs,
   query,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -32,7 +31,8 @@ const parseFirestoreData = (data: any): any => {
 };
 
 const serializeForFirestore = (data: any): any => {
-    if (!data) return data;
+    if (data === undefined) return null; // Firestore doesn't like 'undefined'
+    if (data === null) return null;
     if (data instanceof Date) return Timestamp.fromDate(data);
     if (Array.isArray(data)) return data.map(serializeForFirestore);
     if (typeof data === 'object' && data.constructor === Object) {
@@ -110,7 +110,12 @@ export function useFirestoreDocument<T>(
   const [data, setData] = useState<T>(initialData);
   const [loading, setLoading] = useState(true);
 
+  // Listener for a specific document (if docId is not 'dummy')
   useEffect(() => {
+    if (docId === 'dummy') {
+        setLoading(false);
+        return;
+    }
     const docRef = doc(db, collectionName, docId);
     const unsubscribe = onSnapshot(
       docRef,
@@ -136,6 +141,7 @@ export function useFirestoreDocument<T>(
   }, [collectionName, docId, schema]);
   
   const updateData = useCallback(async (newData: Partial<T>) => {
+    if (docId === 'dummy') return; // Don't update if it's a dummy/singleton doc hook
     const docRef = doc(db, collectionName, docId);
     await setDoc(docRef, serializeForFirestore(newData), { merge: true });
   }, [collectionName, docId]);
@@ -144,10 +150,16 @@ export function useFirestoreDocument<T>(
     const specificDocRef = doc(db, collectionName, id);
     const docSnap = await getDoc(specificDocRef);
     if (docSnap.exists()) {
-        return parseFirestoreData(docSnap.data()) as T;
+        try {
+            const parsed = parseFirestoreData(docSnap.data());
+            return schema.parse(parsed) as T;
+        } catch (error) {
+            console.error(`Zod validation on getDoc for ${collectionName}/${id} failed:`, error);
+            return null;
+        }
     }
     return null;
-  }, [collectionName]);
+  }, [collectionName, schema]);
   
   const deleteDoc = useCallback(async (id: string) => {
     const specificDocRef = doc(db, collectionName, id);

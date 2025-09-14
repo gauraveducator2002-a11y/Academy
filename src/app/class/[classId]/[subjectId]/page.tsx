@@ -105,7 +105,7 @@ export default function SubjectPage() {
     return quiz?.subjectId === subjectId && quiz?.classId === classId;
   }).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-  if (!hasMounted) {
+  if (!hasMounted || !content) {
     return (
         <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight font-headline">
@@ -127,7 +127,7 @@ export default function SubjectPage() {
         <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold tracking-tight font-headline">
-                {currentClass?.name} - {currentSubject?.name}
+                {currentClass.name} - {currentSubject.name}
               </h1>
               <p className="text-muted-foreground">
                 Find all your learning materials here.
@@ -145,7 +145,7 @@ export default function SubjectPage() {
         </TabsList>
         <TabsContent value="notes" className="mt-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {content?.notes && content.notes.length > 0 ? (
+            {content.notes && content.notes.length > 0 ? (
               content.notes.map((note) => (
                 <Card key={note.id} className="flex flex-col h-full transition-shadow duration-300 hover:shadow-lg">
                   <CardHeader className="flex-1">
@@ -171,7 +171,7 @@ export default function SubjectPage() {
         </TabsContent>
          <TabsContent value="tests" className="mt-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {content?.tests && content.tests.length > 0 ? (
+            {content.tests && content.tests.length > 0 ? (
               content.tests.map((test) => (
                 <Card key={test.id} className="flex flex-col h-full transition-shadow duration-300 hover:shadow-lg">
                   <CardHeader className="flex-1">
@@ -197,7 +197,7 @@ export default function SubjectPage() {
         </TabsContent>
         <TabsContent value="quizzes" className="mt-6">
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {content?.quizzes && content.quizzes.length > 0 ? (
+            {content.quizzes && content.quizzes.length > 0 ? (
               content.quizzes.map((quiz) => (
                 <Card key={quiz.id}>
                   <CardHeader>
