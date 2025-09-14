@@ -3,16 +3,13 @@
 import { useContext, useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { ContentContext } from '@/context/content-context';
-import { notFound } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
-import { AlertCircle, ArrowLeft, ArrowRight, CheckCircle, Loader2, TimerIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, Loader2, TimerIcon } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
-import { v4 as uuidv4 } from 'uuid';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 export default function QuizPage() {
     const params = useParams();
@@ -77,7 +74,7 @@ export default function QuizPage() {
         setSelectedAnswers(newAnswers);
     };
 
-    const handleSubmit = (autoSubmit: boolean = false) => {
+    const handleSubmit = async (autoSubmit: boolean = false) => {
         if (isSubmitting) return;
         setIsSubmitting(true);
         
@@ -88,9 +85,7 @@ export default function QuizPage() {
             }
         });
         
-        const attemptId = `attempt-${uuidv4()}`;
-        const attempt = {
-            id: attemptId,
+        const attempt = await addQuizAttempt({
             quizId: quiz.id,
             studentName,
             score,
@@ -98,11 +93,9 @@ export default function QuizPage() {
             timestamp: new Date(),
             answers: selectedAnswers,
             timeTaken: (quiz.timeLimit * 60) - (timeLeft || 0),
-        };
-        
-        addQuizAttempt(attempt);
+        });
 
-        router.push(`/quiz/result/${attemptId}`);
+        router.push(`/quiz/result/${attempt.id}`);
     };
 
     const progress = ((currentQuestionIndex + 1) / quiz.questions.length) * 100;

@@ -1,5 +1,6 @@
 import { initializeApp, getApps, getApp, deleteApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   "projectId": "studio-7566563207-df572",
@@ -13,6 +14,8 @@ const firebaseConfig = {
 
 // Initialize Firebase
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+export const db = getFirestore(app);
+
 
 export const createFirebaseUser = async (email, password) => {
     // We need a secondary app to create users without signing the admin out

@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useState } from 'react';
+import { useState, useContext } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -26,6 +26,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
+import { ContentContext } from '@/context/content-context';
 
 const formSchema = z.object({
   studentName: z.string().min(1, 'Please enter your name.'),
@@ -56,6 +57,7 @@ export function FeedbackDialog({
 }: FeedbackDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { addFeedback } = useContext(ContentContext);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -69,9 +71,8 @@ export function FeedbackDialog({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    onFeedbackSubmit({
+    await addFeedback({
       studentName: values.studentName,
       feedback: values.feedback || '',
       suggestion: values.suggestion || '',

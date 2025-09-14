@@ -28,7 +28,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { classes, subjects } from '@/lib/data';
 import { PlusCircle, Loader2, IndianRupee, ClipboardList } from 'lucide-react';
-import { v4 as uuidv4 } from 'uuid';
 import { ContentContext } from '@/context/content-context';
 
 const noteSchema = z.object({
@@ -158,7 +157,7 @@ export function AddContentDialog({ contentType, onContentAdded }: { contentType:
   const onSubmit = async (values: any) => {
     setIsLoading(true);
     try {
-      const dataToSubmit: any = { ...values, id: uuidv4() };
+      const dataToSubmit: any = { ...values };
 
       if (contentType === 'note' && values.file?.[0]) {
         dataToSubmit.fileUrl = await fileToBase64(values.file[0]);

@@ -67,9 +67,8 @@ export function LogoutFeedbackDialog({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
     
-    addFeedback({
+    await addFeedback({
       studentName: values.studentName,
       feedback: values.feedback || '',
       suggestion: values.suggestion || '',

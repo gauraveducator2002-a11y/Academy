@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { classes, subjects } from '@/lib/data';
-import { PlusCircle, Loader2, IndianRupee, BrainCircuit, Trash2, GripVertical } from 'lucide-react';
+import { PlusCircle, Loader2, IndianRupee, BrainCircuit, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { ContentContext, Quiz } from '@/context/content-context';
 import { Textarea } from '../ui/textarea';
@@ -34,6 +34,7 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Separator } from '../ui/separator';
 
 const questionSchema = z.object({
+  id: z.string().default(() => uuidv4()),
   question: z.string().min(1, 'Question text cannot be empty.'),
   options: z.array(z.string().min(1, 'Option text cannot be empty.')).length(4, 'There must be exactly 4 options.'),
   correctAnswer: z.coerce.number().min(0).max(3),
@@ -50,7 +51,7 @@ const quizSchema = z.object({
 });
 
 
-export function AddQuizDialog({ onQuizAdded }: { onQuizAdded: (quiz: Quiz) => void; }) {
+export function AddQuizDialog({ onQuizAdded }: { onQuizAdded: (quiz: Omit<Quiz, 'id'>) => void; }) {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -77,18 +78,12 @@ export function AddQuizDialog({ onQuizAdded }: { onQuizAdded: (quiz: Quiz) => vo
   const onSubmit = async (values: z.infer<typeof quizSchema>) => {
     setIsLoading(true);
     try {
-      const quizData: Quiz = {
-        ...values,
-        id: uuidv4(),
-        questions: values.questions.map(q => ({...q, id: uuidv4()})),
-      };
-
-      onQuizAdded(quizData);
+      onQuizAdded(values);
       setOpen(false);
       form.reset();
       toast({
         title: 'Success!',
-        description: `The quiz "${quizData.title}" has been added successfully.`,
+        description: `The quiz "${values.title}" has been added successfully.`,
       });
     } catch (error) {
       console.error("Error processing form:", error);
@@ -211,7 +206,7 @@ export function AddQuizDialog({ onQuizAdded }: { onQuizAdded: (quiz: Quiz) => vo
                         </div>
                     ))}
                 </div>
-                 <Button type="button" variant="outline" className="mt-4" onClick={() => append({ question: '', options: ['', '', '', ''], correctAnswer: 0 })}>
+                 <Button type="button" variant="outline" className="mt-4" onClick={() => append({ id: uuidv4(), question: '', options: ['', '', '', ''], correctAnswer: 0 })}>
                     <PlusCircle className="mr-2 h-4 w-4" /> Add Question
                 </Button>
                 <FormField control={form.control} name="questions" render={({ field }) => <FormMessage className="mt-2" />} />
