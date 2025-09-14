@@ -140,35 +140,36 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setHasMounted(true);
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, currentUser => {
       setUser(currentUser);
-       if (currentUser) {
-        // This is a new login or a page refresh with an existing auth state.
-        const localSessionId = localStorage.getItem('session_id');
-        if (!localSessionId) {
-          // This is a fresh login, start a new session.
-          await startUserSession(currentUser.uid);
-        }
-      } else {
-        if (!['/', '/forgot-password'].includes(pathname)) {
-          router.push('/');
-        }
+      if (!currentUser && !['/', '/forgot-password'].includes(pathname)) {
+        router.push('/');
       }
     });
     return () => unsubscribe();
-  }, [pathname, router, startUserSession]);
-  
-  
+  }, [pathname, router]);
+
   useEffect(() => {
-      // This effect is responsible for detecting a session mismatch and forcing a logout.
-      if (typeof window === 'undefined' || !user || !remoteSession) return;
-  
+    // This is the primary session management effect.
+    if (typeof window === 'undefined') return;
+
+    if (user) {
+      // User is logged in.
       const localSessionId = localStorage.getItem('session_id');
-      if (localSessionId && remoteSession.activeSessionId && remoteSession.activeSessionId !== localSessionId) {
+      
+      if (!localSessionId) {
+        // This is a fresh login, start a new session.
+        startUserSession(user.uid);
+      } else if (remoteSession) {
+        // A local session exists, and we have remote session data.
+        // Check for mismatch.
+        if (remoteSession.activeSessionId && remoteSession.activeSessionId !== localSessionId) {
           // Another device has logged in.
           setIsSessionExpired(true);
+        }
       }
-  }, [remoteSession, user]);
+    }
+  }, [user, remoteSession, startUserSession]);
   
 
   const handleLogoutClick = () => {
@@ -192,7 +193,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   }, [endUserSession, router, toast]);
 
   const handleFeedbackAndLogout = useCallback(async (details: { studentName: string; feedback: string; suggestion: string; rating: number; }) => {
-    await addFeedback(details);
+    addFeedback(details);
     toast({
         title: 'Feedback Submitted!',
         description: 'Thank you for your valuable input. Logging you out...',
@@ -228,7 +229,9 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
    const handleSessionExpiredConfirm = async () => {
     setIsSessionExpired(false);
-    await signOut(auth);
+    // The signOut call might be redundant if the session expired dialog is shown correctly
+    // but it's good for ensuring a clean state.
+    await signOut(auth); 
     localStorage.removeItem('session_id');
     router.push('/');
   };
