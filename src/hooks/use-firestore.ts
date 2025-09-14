@@ -92,11 +92,13 @@ export function useFirestoreCollection<T extends {id: string}>(
   }, [collectionName]);
 
   const updateItem = useCallback(async (id: string, item: Partial<Omit<T, 'id'>>) => {
+    if (!id) return;
     const docRef = doc(db, collectionName, id);
     await updateDoc(docRef, serializeForFirestore(item));
   }, [collectionName]);
 
   const deleteItem = useCallback(async (id: string) => {
+    if (!id) return;
     await deleteFirestoreDoc(doc(db, collectionName, id));
   }, [collectionName]);
 

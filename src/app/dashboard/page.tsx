@@ -124,6 +124,7 @@ export default function DashboardPage() {
                 </Button>
             </div>
         </div>
+        
          <FeedbackDialog
             isOpen={isFeedbackDialogOpen}
             onClose={() => setIsFeedbackDialogOpen(false)}

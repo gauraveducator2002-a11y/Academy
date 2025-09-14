@@ -126,7 +126,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
 
   const pricing = pricingData ?? initialPricing;
 
-  const setPricing = useCallback(async (newPricing: Pricing) => {
+  const setPricingCallback = useCallback(async (newPricing: Pricing) => {
     await updatePricingData(newPricing);
   },[updatePricingData]);
 
@@ -141,7 +141,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   }, {} as ContentData);
   
 
-  const addNotification = useCallback(async (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
+  const addNotificationCallback = useCallback(async (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
     return await addNotificationFirestore({
         ...notification,
         timestamp: new Date(),
@@ -149,16 +149,16 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [addNotificationFirestore]);
 
-  const markNotificationAsRead = useCallback(async (notificationId: string) => {
+  const markNotificationAsReadCallback = useCallback(async (notificationId: string) => {
       await updateNotification(notificationId, { read: true });
   }, [updateNotification]);
 
-  const markAllNotificationsAsRead = useCallback(async () => {
+  const markAllNotificationsAsReadCallback = useCallback(async () => {
     const unreadNotifications = notifications.filter(n => !n.read);
     await Promise.all(unreadNotifications.map(n => updateNotification(n.id, { read: true })));
   }, [notifications, updateNotification]);
 
-  const addContent = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', data: any) => {
+  const addContentCallback = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', data: any) => {
     let result;
     const commonData = { ...data, subjectId };
     
@@ -173,7 +173,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     const classInfo = classes.find(c => c.id === data.classId);
     
     if(subject && classInfo) {
-      await addNotification({
+      await addNotificationCallback({
           title: `New ${type} added!`,
           message: `A new ${type} "${data.title}" has been added to ${subject.name} for ${classInfo.name}.`,
           classId: data.classId,
@@ -182,9 +182,9 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     }
 
     return result;
-  }, [addNote, addQuiz, addTest, addNotification]);
+  }, [addNote, addQuiz, addTest, addNotificationCallback]);
 
-  const deleteContent = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', id: string) => {
+  const deleteContentCallback = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', id: string) => {
     switch (type) {
         case 'note': await deleteNote(id); break;
         case 'quiz': await deleteQuiz(id); break;
@@ -192,7 +192,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [deleteNote, deleteQuiz, deleteTest]);
   
-  const handleAddQuizAttempt = useCallback(async (attempt: Omit<QuizAttempt, 'id'>) => {
+  const handleAddQuizAttemptCallback = useCallback(async (attempt: Omit<QuizAttempt, 'id'>) => {
     const newAttempt = await addQuizAttempt(attempt) as QuizAttempt;
     const quiz = quizzes.find(q => q.id === attempt.quizId);
 
@@ -213,14 +213,14 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     return newAttempt;
 }, [addQuizAttempt, quizzes, addActivity]);
   
-  const addFeedback = useCallback(async (feedbackData: Omit<Feedback, 'id' | 'timestamp'>) => {
+  const addFeedbackCallback = useCallback(async (feedbackData: Omit<Feedback, 'id' | 'timestamp'>) => {
     return addFeedbackFirestore({ ...feedbackData, timestamp: new Date() });
   }, [addFeedbackFirestore]);
 
   const value = {
     contentData,
-    addContent,
-    deleteContent,
+    addContent: addContentCallback,
+    deleteContent: deleteContentCallback,
     recentActivity,
     addActivity: useCallback(addActivity, [addActivity]),
     transactions,
@@ -230,19 +230,19 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     updateDiscountCode: useCallback(updateDiscountCode, [updateDiscountCode]),
     deleteDiscountCode: useCallback(deleteDiscountCode, [deleteDiscountCode]),
     pricing,
-    setPricing,
+    setPricing: setPricingCallback,
     quizAttempts,
-    addQuizAttempt: handleAddQuizAttempt,
+    addQuizAttempt: handleAddQuizAttemptCallback,
     studentUsers,
     addStudentUser: useCallback(addStudentUser, [addStudentUser]),
     feedback,
-    addFeedback,
+    addFeedback: addFeedbackCallback,
     theme,
     setTheme,
     notifications,
-    addNotification,
-    markNotificationAsRead,
-    markAllNotificationsAsRead,
+    addNotification: addNotificationCallback,
+    markNotificationAsRead: markNotificationAsReadCallback,
+    markAllNotificationsAsRead: markAllNotificationsAsReadCallback,
   };
 
   return (

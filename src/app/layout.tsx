@@ -149,35 +149,30 @@ function AppContent({ children }: { children: React.ReactNode }) {
     setHasMounted(true);
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (!currentUser) {
+      if (currentUser) {
+        // This is a new login or a page refresh with an existing auth state.
+        // We must validate the session.
+        const localSessionId = localStorage.getItem('session_id');
+        const valid = isSessionValid();
+        
+        if (valid) {
+          // Session is valid, do nothing.
+        } else if (localSessionId && !valid) {
+          // A local session exists, but it's not the one in the DB.
+          // This means another device has logged in.
+          setIsSessionExpired(true);
+        } else {
+          // This is a fresh login, start a new session.
+          startUserSession(currentUser.uid);
+        }
+      } else {
         if (!['/', '/forgot-password'].includes(pathname)) {
           router.push('/');
         }
       }
     });
     return () => unsubscribe();
-  }, [pathname, router]);
-
-  useEffect(() => {
-    if (user) {
-      // This is a new login or a page refresh with an existing auth state.
-      // We must validate the session.
-      const localSessionId = localStorage.getItem('session_id');
-      const valid = isSessionValid();
-      
-      if (valid) {
-        // Session is valid, do nothing.
-      } else if (localSessionId && !valid) {
-        // A local session exists, but it's not the one in the DB.
-        // This means another device has logged in.
-        setIsSessionExpired(true);
-      } else {
-        // This is a fresh login, start a new session.
-        startUserSession(user.uid);
-      }
-    }
-  }, [user, isSessionValid, startUserSession]);
-
+  }, [pathname, router, isSessionValid, startUserSession]);
 
   const handleLogoutClick = () => {
     setIsLogoutFeedbackOpen(true);
@@ -242,6 +237,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   };
   
   const isAuthPage = ['/', '/forgot-password'].includes(pathname);
+  const isAdmin = user?.email === 'gauraveducator2002@gmail.com';
 
   if (isAuthPage) {
     return <>{children}</>;
@@ -272,18 +268,20 @@ function AppContent({ children }: { children: React.ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname.startsWith('/feedback')}
-                tooltip="Community Feedback"
-              >
-                <Link href="/feedback">
-                  <MessagesSquare />
-                  <span>Community Feedback</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
+            {!isAdmin && (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname.startsWith('/feedback')}
+                  tooltip="Community Feedback"
+                >
+                  <Link href="/feedback">
+                    <MessagesSquare />
+                    <span>Community Feedback</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
               <SidebarMenuItem>
               <SidebarMenuButton
                 asChild
@@ -296,7 +294,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
-            {user?.email === 'gauraveducator2002@gmail.com' && (
+            {isAdmin && (
               <>
                 <SidebarMenuItem>
                   <SidebarMenuButton
@@ -398,12 +396,15 @@ function AppContent({ children }: { children: React.ReactNode }) {
         </header>
         <main className="flex-1 overflow-auto p-4 sm:p-6">{children}</main>
       </SidebarInset>
-      <LogoutFeedbackDialog
-          isOpen={isLogoutFeedbackOpen}
-          onClose={() => setIsLogoutFeedbackOpen(false)}
-          onFeedbackSubmit={handleFeedbackAndLogout}
-          onSkip={handleFinalLogout}
+      {!isAdmin && (
+        <LogoutFeedbackDialog
+            isOpen={isLogoutFeedbackOpen}
+            onClose={() => setIsLogoutFeedbackOpen(false)}
+            onFeedbackSubmit={handleFeedbackAndLogout}
+            onSkip={handleFinalLogout}
         />
+      )}
+      {isAdmin && isLogoutFeedbackOpen && handleFinalLogout()}
         <SessionExpiredDialog 
             isOpen={isSessionExpired}
             onConfirm={handleSessionExpiredConfirm}
