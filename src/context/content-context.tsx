@@ -154,9 +154,8 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   }, [notifications, updateNotification]);
 
   const addContentCallback = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', data: any) => {
-    const id = data.id || uuidv4();
     let result;
-    const commonData = { ...data, id, subjectId };
+    const commonData = { ...data, subjectId };
     
     switch (type) {
       case 'note': result = await addNote(commonData); break;
@@ -218,11 +217,11 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     addContent: addContentCallback,
     deleteContent: deleteContentCallback,
     recentActivity,
-    addActivity: useCallback((activity) => addActivity(activity), [addActivity]),
+    addActivity: useCallback((activity: Omit<Activity, 'id'>) => addActivity(activity), [addActivity]),
     transactions,
-    addTransaction: useCallback((transaction) => addTransaction(transaction), [addTransaction]),
+    addTransaction: useCallback((transaction: Omit<Transaction, 'id'>) => addTransaction(transaction), [addTransaction]),
     discountCodes,
-    addDiscountCode: useCallback((code) => addDiscountCode(code), [addDiscountCode]),
+    addDiscountCode: useCallback((code: Omit<DiscountCode, 'id'>) => addDiscountCode(code), [addDiscountCode]),
     updateDiscountCode: useCallback(updateDiscountCode, [updateDiscountCode]),
     deleteDiscountCode: useCallback(deleteDiscountCode, [deleteDiscountCode]),
     pricing,
@@ -230,7 +229,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     quizAttempts,
     addQuizAttempt: handleAddQuizAttemptCallback,
     studentUsers,
-    addStudentUser: useCallback((user) => addStudentUser(user), [addStudentUser]),
+    addStudentUser: useCallback((user: Omit<StudentUser, 'id'>) => addStudentUser(user), [addStudentUser]),
     feedback,
     addFeedback: addFeedbackCallback,
     theme,

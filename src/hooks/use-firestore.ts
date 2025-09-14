@@ -88,10 +88,9 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
   }, [collectionName, schema]);
 
   const addItem = useCallback(async (item: Omit<ItemType, 'id'>) => {
-    const id = uuidv4();
-    const docRef = doc(db, collectionName, id);
-    await setDoc(docRef, serializeForFirestore(item));
-    return { ...item, id };
+    const collectionRef = collection(db, collectionName);
+    const docRef = await addDoc(collectionRef, serializeForFirestore(item));
+    return { ...item, id: docRef.id };
   }, [collectionName]);
 
   const updateItem = useCallback(async (id: string, item: Partial<Omit<ItemType, 'id'>>) => {
