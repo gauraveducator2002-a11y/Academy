@@ -17,7 +17,7 @@ import {
   Bell,
   BellDot,
 } from 'lucide-react';
-import { getAuth, sendPasswordResetEmail, onAuthStateChanged, User } from 'firebase/auth';
+import { getAuth, sendPasswordResetEmail, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { useState, useEffect, useContext } from 'react';
 
@@ -50,6 +50,7 @@ import { LogoutFeedbackDialog } from '@/components/student/logout-feedback-dialo
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { v4 as uuidv4 } from 'uuid';
+import { SessionExpiredDialog } from '@/components/auth/session-expired-dialog';
 
 const auth = getAuth(app);
 
@@ -113,6 +114,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [isLogoutFeedbackOpen, setIsLogoutFeedbackOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
   const { startUserSession, isSessionValid, endUserSession } = useContext(ContentContext);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
 
   useEffect(() => {
     setHasMounted(true);
@@ -141,17 +143,18 @@ function AppContent({ children }: { children: React.ReactNode }) {
     const interval = setInterval(async () => {
         const valid = await isSessionValid(user.uid);
         if (!valid) {
-            await auth.signOut();
-            toast({
-                variant: 'destructive',
-                title: 'Session Expired',
-                description: 'You have been logged out because this account was accessed from another device.',
-            });
+            setIsSessionExpired(true);
         }
     }, 15000); // Check every 15 seconds
 
     return () => clearInterval(interval);
-  }, [user, isSessionValid, toast]);
+  }, [user, isSessionValid]);
+  
+  const handleSessionExpiredConfirm = async () => {
+      await signOut(auth);
+      setIsSessionExpired(false);
+      router.push('/');
+  }
 
   const handleLogoutClick = () => {
     setIsLogoutFeedbackOpen(true);
@@ -355,6 +358,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
               handleFinalLogout();
           }}
           onFeedbackSubmit={handleFinalLogout}
+        />
+        <SessionExpiredDialog
+            isOpen={isSessionExpired}
+            onConfirm={handleSessionExpiredConfirm}
         />
     </SidebarProvider>
   );
