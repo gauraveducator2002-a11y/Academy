@@ -6,7 +6,6 @@ import {
   onSnapshot,
   doc,
   setDoc,
-  getDoc as getFirestoreDoc,
   deleteDoc as deleteFirestoreDoc,
   Timestamp,
   updateDoc,
@@ -106,25 +105,22 @@ export function useFirestoreCollection<T extends {id: string}>(
 
 
 export function useFirestoreDocument<T>(
-  path: string,
+  collectionName: string,
+  docId: string | undefined,
   schema: z.ZodType<T>
 ) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const pathSegments = path.split('/').filter(Boolean);
-
   useEffect(() => {
-    if (pathSegments.length % 2 !== 0) {
-      // Path must have an even number of segments (collection/doc/collection/doc...)
-      // The path given is to a collection, not a document.
+    if (!docId) {
       setData(null);
       setLoading(false);
       return;
     }
     
     setLoading(true);
-    const docRef = doc(db, path);
+    const docRef = doc(db, collectionName, docId);
     const unsubscribe = onSnapshot(
       docRef,
       (docSnap) => {
@@ -134,7 +130,7 @@ export function useFirestoreDocument<T>(
             const validatedData = schema.parse(item);
             setData(validatedData);
           } catch (error) {
-            console.error(`Zod validation failed for ${path}:`, error);
+            console.error(`Zod validation failed for ${collectionName}/${docId}:`, error);
             setData(null);
           }
         } else {
@@ -143,22 +139,29 @@ export function useFirestoreDocument<T>(
         setLoading(false);
       },
       (error) => {
-        console.error(`Error fetching ${path}: `, error);
+        console.error(`Error fetching ${collectionName}/${docId}: `, error);
         setData(null);
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [path, schema, pathSegments.length]);
+  }, [collectionName, docId, schema]);
   
   const updateData = useCallback(async (newData: Partial<T>) => {
-    if (pathSegments.length % 2 !== 0) return;
-    const docRef = doc(db, path);
+    if (!docId) return;
+    const docRef = doc(db, collectionName, docId);
     await setDoc(docRef, serializeForFirestore(newData), { merge: true });
-  }, [path, pathSegments.length]);
+  }, [collectionName, docId]);
 
-  return { data, loading, updateData };
+  const deleteDocFunc = useCallback(async () => {
+    if (!docId) return;
+    const docRef = doc(db, collectionName, docId);
+    await deleteFirestoreDoc(docRef);
+  }, [collectionName, docId]);
+
+
+  return { data, loading, updateData, deleteDoc: deleteDocFunc };
 }
 
 

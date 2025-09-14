@@ -2,7 +2,7 @@
 
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { ContentProvider, ContentContext, type Notification } from '@/context/content-context';
+import { ContentProvider, ContentContext, type Notification, UserSessionSchema } from '@/context/content-context';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -119,83 +119,64 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const { addFeedback } = useContext(ContentContext);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
 
+  // Session management logic
+  const { data: remoteSession, updateData: updateRemoteSession, deleteDoc: deleteRemoteSession } = useFirestoreDocument('sessions', user?.uid, UserSessionSchema);
+
   const startUserSession = useCallback(async (userId: string) => {
     if (typeof window === 'undefined') return;
     const sessionId = uuidv4();
     localStorage.setItem('session_id', sessionId);
-    const sessionDocRef = doc(db, 'sessions', userId);
-    await setDoc(sessionDocRef, {
-        activeSessionId: sessionId,
-        lastLogin: Timestamp.fromDate(new Date())
+    await updateRemoteSession({ 
+      activeSessionId: sessionId, 
+      lastLogin: new Date() 
     });
-  }, []);
+  }, [updateRemoteSession]);
 
-  const endUserSession = useCallback(async (userId: string) => {
+  const endUserSession = useCallback(async () => {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('session_id');
-    const sessionDocRef = doc(db, 'sessions', userId);
-    await deleteDoc(sessionDocRef);
-  }, []);
-  
-  const isSessionValid = useCallback(async (userId: string): Promise<boolean> => {
-    if (typeof window === 'undefined') return false;
+    await deleteRemoteSession();
+  }, [deleteRemoteSession]);
+
+  const isSessionValid = useCallback((): boolean => {
+    if (typeof window === 'undefined' || !remoteSession) return false;
     const localSessionId = localStorage.getItem('session_id');
     if (!localSessionId) return false;
-
-    const sessionDocRef = doc(db, 'sessions', userId);
-    const docSnap = await getDoc(sessionDocRef);
-
-    if (docSnap.exists()) {
-        return docSnap.data().activeSessionId === localSessionId;
-    }
-    return false;
-  }, []);
+    return remoteSession.activeSessionId === localSessionId;
+  }, [remoteSession]);
 
   useEffect(() => {
     setHasMounted(true);
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-          const valid = await isSessionValid(currentUser.uid);
-          if (valid) {
-              setUser(currentUser);
-          } else {
-              // This can happen if this is a new login or the session is from another device.
-              // If there's a local session ID, it means this device's session has been overridden.
-              if (localStorage.getItem('session_id')) {
-                  setIsSessionExpired(true);
-              } else {
-                  // This is a fresh login, so we start a new session.
-                  await startUserSession(currentUser.uid);
-                  setUser(currentUser);
-              }
-          }
-      } else {
-        setUser(null);
+      setUser(currentUser);
+      if (!currentUser) {
         if (!['/', '/forgot-password'].includes(pathname)) {
           router.push('/');
         }
       }
     });
-
     return () => unsubscribe();
-  }, [isSessionValid, startUserSession, pathname, router]);
+  }, [pathname, router]);
 
   useEffect(() => {
-    if (!user) return;
-    // This interval checks for session validity every 15 seconds.
-    const interval = setInterval(async () => {
-        if (auth.currentUser) {
-            const valid = await isSessionValid(auth.currentUser.uid);
-            if (!valid) {
-                // If session is no longer valid, show the dialog and stop the interval.
-                setIsSessionExpired(true);
-                clearInterval(interval);
-            }
-        }
-    }, 15000); 
-
-    return () => clearInterval(interval);
-  }, [user, isSessionValid]);
+    if (user) {
+      // This is a new login or a page refresh with an existing auth state.
+      // We must validate the session.
+      const localSessionId = localStorage.getItem('session_id');
+      const valid = isSessionValid();
+      
+      if (valid) {
+        // Session is valid, do nothing.
+      } else if (localSessionId && !valid) {
+        // A local session exists, but it's not the one in the DB.
+        // This means another device has logged in.
+        setIsSessionExpired(true);
+      } else {
+        // This is a fresh login, start a new session.
+        startUserSession(user.uid);
+      }
+    }
+  }, [user, isSessionValid, startUserSession]);
 
 
   const handleLogoutClick = () => {
@@ -204,9 +185,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
   const handleFinalLogout = useCallback(async () => {
     try {
-        if (auth.currentUser) {
-            await endUserSession(auth.currentUser.uid);
-        }
+        await endUserSession();
         await signOut(auth);
         setIsLogoutFeedbackOpen(false);
         router.push('/');
@@ -257,7 +236,6 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
    const handleSessionExpiredConfirm = async () => {
     setIsSessionExpired(false);
-    // Don't call endUserSession here because the session is already ended by another device.
     await signOut(auth);
     localStorage.removeItem('session_id');
     router.push('/');

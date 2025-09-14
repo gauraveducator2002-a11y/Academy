@@ -21,7 +21,7 @@ const PricingSchema = z.object({ notePriceInr: z.number(), quizPriceInr: z.numbe
 const StudentUserSchema = z.object({ id: z.string(), username: z.string(), email: z.string(), classId: z.string() });
 const FeedbackSchema = z.object({ id: z.string(), studentName: z.string(), feedback: z.string(), suggestion: z.string(), rating: z.number(), timestamp: z.date() });
 const NotificationSchema = z.object({ id: z.string(), title: z.string(), message: z.string(), timestamp: z.date(), read: z.boolean(), classId: z.string(), subjectId: z.string() });
-const UserSessionSchema = z.object({ activeSessionId: z.string(), lastLogin: z.date() });
+export const UserSessionSchema = z.object({ activeSessionId: z.string(), lastLogin: z.date() });
 
 // Collection Schemas
 const NotesCollectionSchema = z.array(NoteSchema);
@@ -116,7 +116,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const { data: recentActivity, addItem: addActivity } = useFirestoreCollection('recentActivity', z.array(ActivitySchema));
   const { data: transactions, addItem: addTransaction } = useFirestoreCollection('transactions', z.array(TransactionSchema));
   const { data: discountCodes, addItem: addDiscountCode, updateItem: updateDiscountCode, deleteItem: deleteDiscountCode } = useFirestoreCollection('discountCodes', z.array(DiscountCodeSchema));
-  const { data: pricingData, updateData: updatePricingData } = useFirestoreDocument('pricing/default', PricingSchema);
+  const { data: pricingData, updateData: updatePricingData } = useFirestoreDocument('pricing', 'default', PricingSchema);
   const { data: quizAttempts, addItem: addQuizAttempt } = useFirestoreCollection('quizAttempts', z.array(QuizAttemptSchema));
   const { data: studentUsers, addItem: addStudentUser } = useFirestoreCollection('studentUsers', z.array(StudentUserSchema));
   const { data: feedback, addItem: addFeedbackFirestore } = useFirestoreCollection('feedback', z.array(FeedbackSchema));
