@@ -6,7 +6,7 @@ import {
   onSnapshot,
   doc,
   setDoc,
-  getDoc,
+  getDoc as getFirestoreDoc,
   deleteDoc,
   Timestamp,
   updateDoc,
@@ -111,7 +111,6 @@ export function useFirestoreDocument<T>(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Guard against invalid docId
     if (typeof docId !== 'string' || !docId) {
         setLoading(false);
         setData(initialData);
@@ -141,7 +140,7 @@ export function useFirestoreDocument<T>(
     );
 
     return () => unsubscribe();
-  }, [collectionName, docId, schema, initialData]);
+  }, [collectionName, docId, JSON.stringify(initialData), schema]);
   
   const upsert = useCallback(async (id: string, newData: any) => {
     if (typeof id !== 'string' || !id) return;
@@ -149,16 +148,16 @@ export function useFirestoreDocument<T>(
     await setDoc(specificDocRef, serializeForFirestore(newData), { merge: true });
   }, [collectionName]);
 
-  const getDoc = useCallback(async (id: string) => {
+  const getSpecificDoc = useCallback(async (id: string): Promise<T | null> => {
     if (typeof id !== 'string' || !id) return null;
     const specificDocRef = doc(db, collectionName, id);
-    const docSnap = await getDoc(specificDocRef);
+    const docSnap = await getFirestoreDoc(specificDocRef);
     if (docSnap.exists()) {
         try {
             const parsed = parseFirestoreData(docSnap.data());
             return schema.parse(parsed) as T;
         } catch (error) {
-            console.error(`Zod validation on getDoc for ${collectionName}/${id} failed:`, error);
+            console.error(`Zod validation on getSpecificDoc for ${collectionName}/${id} failed:`, error);
             return null;
         }
     }
@@ -178,7 +177,7 @@ export function useFirestoreDocument<T>(
   }, [collectionName]);
 
 
-  return { data, loading, updateData, getDoc, deleteDoc, upsert };
+  return { data, loading, updateData, getDoc: getSpecificDoc, deleteDoc, upsert };
 }
 
 
