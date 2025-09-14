@@ -57,13 +57,13 @@ export default function AdminPageClient() {
 
   const handleContentAdded = async (type: 'note' | 'quiz' | 'test', content: any) => {
     try {
-      await addContent(content.subjectId, type, content);
+      const addedContent = await addContent(content.subjectId, type, content);
 
-      const classInfo = classes.find((c) => c.id === content.classId);
-      const subjectInfo = subjects.find((s) => s.id === content.subjectId);
+      const classInfo = classes.find((c) => c.id === addedContent.classId);
+      const subjectInfo = subjects.find((s) => s.id === addedContent.subjectId);
     
       let activityType: keyof typeof activityIcons | undefined;
-      let activityTitle: string = content.title;
+      let activityTitle: string = addedContent.title;
       
       switch (type) {
         case 'note':
@@ -78,13 +78,13 @@ export default function AdminPageClient() {
       }
     
       if (activityType && subjectInfo && classInfo) {
-        addActivity({
+        await addActivity({
           type: activityType,
           title: activityTitle,
           subject: subjectInfo.name,
           class: classInfo.id,
           timestamp: new Date(),
-          fileUrl: type === 'note' ? content.fileUrl : null,
+          fileUrl: type === 'note' ? addedContent.fileUrl : null,
         });
       }
     } catch (error) {
