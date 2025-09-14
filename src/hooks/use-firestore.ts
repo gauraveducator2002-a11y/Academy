@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { z } from 'zod';
+import { v4 as uuidv4 } from 'uuid';
 
 const parseFirestoreData = (data: any): any => {
   if (!data) return data;
@@ -46,11 +47,12 @@ const serializeForFirestore = (data: any): any => {
     return data;
   };
 
-export function useFirestoreCollection<T extends {id: string}>(
+export function useFirestoreCollection<T extends z.ZodTypeAny>(
   collectionName: string,
-  schema: z.ZodType<T[]>
+  schema: z.ZodArray<T>
 ) {
-  const [data, setData] = useState<T[]>([]);
+  type ItemType = z.infer<T>;
+  const [data, setData] = useState<ItemType[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -85,14 +87,14 @@ export function useFirestoreCollection<T extends {id: string}>(
     return () => unsubscribe();
   }, [collectionName, schema]);
 
-  const addItem = useCallback(async (item: T) => {
-    const { id, ...itemData } = item;
+  const addItem = useCallback(async (item: Omit<ItemType, 'id'>) => {
+    const id = uuidv4();
     const docRef = doc(db, collectionName, id);
-    await setDoc(docRef, serializeForFirestore(itemData));
-    return item;
+    await setDoc(docRef, serializeForFirestore(item));
+    return { ...item, id };
   }, [collectionName]);
 
-  const updateItem = useCallback(async (id: string, item: Partial<Omit<T, 'id'>>) => {
+  const updateItem = useCallback(async (id: string, item: Partial<Omit<ItemType, 'id'>>) => {
     if (!id) return;
     const docRef = doc(db, collectionName, id);
     await updateDoc(docRef, serializeForFirestore(item));

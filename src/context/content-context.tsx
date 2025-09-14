@@ -5,8 +5,6 @@ import { z } from 'zod';
 import { classes, subjects } from '@/lib/data';
 import { useFirestoreCollection, useFirestoreDocument, useTheme } from '@/hooks/use-firestore';
 import { v4 as uuidv4 } from 'uuid';
-import { doc, getDoc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 
 // Zod Schemas for validation
 const NoteSchema = z.object({ id: z.string(), classId: z.string(), subjectId: z.string(), title: z.string(), description: z.string(), fileUrl: z.string(), priceInr: z.number() });
@@ -156,7 +154,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   }, [notifications, updateNotification]);
 
   const addContentCallback = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', data: any) => {
-    const id = uuidv4();
+    const id = data.id || uuidv4();
     let result;
     const commonData = { ...data, id, subjectId };
     
@@ -212,7 +210,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
 }, [addQuizAttempt, quizzes, addActivity]);
   
   const addFeedbackCallback = useCallback(async (feedbackData: Omit<Feedback, 'id' | 'timestamp'>) => {
-    return addFeedbackFirestore({ ...feedbackData, id: uuidv4(), timestamp: new Date() });
+    return addFeedbackFirestore({ ...feedbackData, timestamp: new Date() });
   }, [addFeedbackFirestore]);
 
   const value = {
@@ -220,11 +218,11 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     addContent: addContentCallback,
     deleteContent: deleteContentCallback,
     recentActivity,
-    addActivity: useCallback(addActivity, [addActivity]),
+    addActivity: useCallback((activity) => addActivity(activity), [addActivity]),
     transactions,
-    addTransaction: useCallback(addTransaction, [addTransaction]),
+    addTransaction: useCallback((transaction) => addTransaction(transaction), [addTransaction]),
     discountCodes,
-    addDiscountCode: useCallback((code) => addDiscountCode({...code, id: uuidv4()}), [addDiscountCode]),
+    addDiscountCode: useCallback((code) => addDiscountCode(code), [addDiscountCode]),
     updateDiscountCode: useCallback(updateDiscountCode, [updateDiscountCode]),
     deleteDiscountCode: useCallback(deleteDiscountCode, [deleteDiscountCode]),
     pricing,
@@ -232,7 +230,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     quizAttempts,
     addQuizAttempt: handleAddQuizAttemptCallback,
     studentUsers,
-    addStudentUser: useCallback((user) => addStudentUser({...user, id: uuidv4()}), [addStudentUser]),
+    addStudentUser: useCallback((user) => addStudentUser(user), [addStudentUser]),
     feedback,
     addFeedback: addFeedbackCallback,
     theme,

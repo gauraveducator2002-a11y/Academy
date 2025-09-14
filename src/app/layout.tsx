@@ -2,7 +2,7 @@
 
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { ContentProvider, ContentContext, type Notification, UserSessionSchema } from '@/context/content-context';
+import { ContentProvider, ContentContext, type Notification } from '@/context/content-context';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -18,7 +18,7 @@ import {
   BellDot,
 } from 'lucide-react';
 import { getAuth, sendPasswordResetEmail, onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { app, db } from '@/lib/firebase';
+import { app } from '@/lib/firebase';
 import { useState, useEffect, useContext, useCallback } from 'react';
 import { useFirestoreDocument } from '@/hooks/use-firestore';
 
@@ -52,7 +52,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { SessionExpiredDialog } from '@/components/auth/session-expired-dialog';
 import { v4 as uuidv4 } from 'uuid';
-import { doc, getDoc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
+import { UserSessionSchema } from '@/context/content-context';
 
 
 const auth = getAuth(app);
@@ -138,32 +138,16 @@ function AppContent({ children }: { children: React.ReactNode }) {
     await deleteRemoteSession();
   }, [deleteRemoteSession]);
 
-  const isSessionValid = useCallback((): boolean => {
-    if (typeof window === 'undefined' || !remoteSession) return false;
-    const localSessionId = localStorage.getItem('session_id');
-    if (!localSessionId) return false;
-    return remoteSession.activeSessionId === localSessionId;
-  }, [remoteSession]);
-
   useEffect(() => {
     setHasMounted(true);
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
+       if (currentUser) {
         // This is a new login or a page refresh with an existing auth state.
-        // We must validate the session.
         const localSessionId = localStorage.getItem('session_id');
-        const valid = isSessionValid();
-        
-        if (valid) {
-          // Session is valid, do nothing.
-        } else if (localSessionId && !valid) {
-          // A local session exists, but it's not the one in the DB.
-          // This means another device has logged in.
-          setIsSessionExpired(true);
-        } else {
+        if (!localSessionId) {
           // This is a fresh login, start a new session.
-          startUserSession(currentUser.uid);
+          await startUserSession(currentUser.uid);
         }
       } else {
         if (!['/', '/forgot-password'].includes(pathname)) {
@@ -172,7 +156,20 @@ function AppContent({ children }: { children: React.ReactNode }) {
       }
     });
     return () => unsubscribe();
-  }, [pathname, router, isSessionValid, startUserSession]);
+  }, [pathname, router, startUserSession]);
+  
+  
+  useEffect(() => {
+      // This effect is responsible for detecting a session mismatch and forcing a logout.
+      if (typeof window === 'undefined' || !user || !remoteSession) return;
+  
+      const localSessionId = localStorage.getItem('session_id');
+      if (localSessionId && remoteSession.activeSessionId !== localSessionId) {
+          // Another device has logged in.
+          setIsSessionExpired(true);
+      }
+  }, [remoteSession, user]);
+  
 
   const handleLogoutClick = () => {
     setIsLogoutFeedbackOpen(true);
