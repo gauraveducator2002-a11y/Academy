@@ -164,7 +164,7 @@ export function useFirestoreDocument<T>(
     await setDoc(docRef, serializeForFirestore(newData));
   }, [docRef]);
 
-  return { data, loading, updateData: docId === 'default' ? updateDefaultData : updateData, getDoc, deleteDoc: deleteDoc };
+  return { data, loading, updateData: docId === 'default' ? (...args: any[]) => updateDefaultData(args[1] as T) : updateData, getDoc, deleteDoc: deleteDoc };
 }
 
 // Hook for theme which still uses localStorage
