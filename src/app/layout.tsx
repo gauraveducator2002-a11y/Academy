@@ -118,15 +118,11 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setHasMounted(true);
-  }, []);
-
-  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         const valid = await isSessionValid(currentUser.uid);
         if (valid) {
           setUser(currentUser);
-          // Only start a new session if one isn't already set
           if (!localStorage.getItem('session_id')) {
             await startUserSession(currentUser.uid);
           }
@@ -136,19 +132,27 @@ function AppContent({ children }: { children: React.ReactNode }) {
         }
       } else {
         setUser(null);
-        const localSessionId = localStorage.getItem('session_id');
-        // Only end session if one exists to avoid unnecessary writes
-        if (localSessionId) {
-          endUserSession(localSessionId);
-        }
-        // Only redirect if not on a public page
         if (!['/', '/forgot-password'].includes(pathname)) {
           router.push('/');
         }
       }
     });
-    return () => unsubscribe();
-  }, [pathname, router, startUserSession, isSessionValid, endUserSession]);
+
+    const interval = setInterval(async () => {
+      const currentUser = auth.currentUser;
+      if (currentUser) {
+        const valid = await isSessionValid(currentUser.uid);
+        if (!valid) {
+          setIsSessionExpired(true);
+        }
+      }
+    }, 5000); // Check every 5 seconds
+
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
+  }, []); // Empty dependency array is correct here
 
 
   const handleLogoutClick = () => {

@@ -158,7 +158,6 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const endUserSession = useCallback(async (userId: string) => {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('session_id');
-    // We use the userId to delete the session doc now, not the session_id
     await deleteSessionDoc(userId);
   }, [deleteSessionDoc]);
 
@@ -169,8 +168,6 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
 
     const remoteSession = await getSessionDoc(userId);
     if (!remoteSession) {
-        // If there's a local session but no remote one, it's invalid.
-        // This can happen if the doc was deleted from another device.
         return false;
     }
     return remoteSession.activeSessionId === localSessionId;
@@ -257,19 +254,19 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     addContent,
     deleteContent,
     recentActivity,
-    addActivity,
+    addActivity: useCallback(addActivity, [addActivity]),
     transactions,
-    addTransaction,
+    addTransaction: useCallback(addTransaction, [addTransaction]),
     discountCodes,
-    addDiscountCode,
-    updateDiscountCode,
-    deleteDiscountCode,
+    addDiscountCode: useCallback(addDiscountCode, [addDiscountCode]),
+    updateDiscountCode: useCallback(updateDiscountCode, [updateDiscountCode]),
+    deleteDiscountCode: useCallback(deleteDiscountCode, [deleteDiscountCode]),
     pricing,
     setPricing,
     quizAttempts,
     addQuizAttempt: handleAddQuizAttempt,
     studentUsers,
-    addStudentUser,
+    addStudentUser: useCallback(addStudentUser, [addStudentUser]),
     feedback,
     addFeedback,
     theme,
