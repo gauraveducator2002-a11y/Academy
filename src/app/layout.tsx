@@ -140,36 +140,28 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     setHasMounted(true);
-    const unsubscribe = onAuthStateChanged(auth, currentUser => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
       if (!currentUser && !['/', '/forgot-password'].includes(pathname)) {
         router.push('/');
+      } else if (currentUser) {
+        const localSessionId = localStorage.getItem('session_id');
+        if (!localSessionId) {
+          await startUserSession(currentUser.uid);
+        }
       }
     });
     return () => unsubscribe();
-  }, [pathname, router]);
+  }, [pathname, router, startUserSession]);
 
   useEffect(() => {
-    // This is the primary session management effect.
-    if (typeof window === 'undefined') return;
-
-    if (user) {
-      // User is logged in.
+    if (user && remoteSession) {
       const localSessionId = localStorage.getItem('session_id');
-      
-      if (!localSessionId) {
-        // This is a fresh login, start a new session.
-        startUserSession(user.uid);
-      } else if (remoteSession) {
-        // A local session exists, and we have remote session data.
-        // Check for mismatch.
-        if (remoteSession.activeSessionId && remoteSession.activeSessionId !== localSessionId) {
-          // Another device has logged in.
-          setIsSessionExpired(true);
-        }
+      if (localSessionId && remoteSession.activeSessionId && remoteSession.activeSessionId !== localSessionId) {
+        setIsSessionExpired(true);
       }
     }
-  }, [user, remoteSession, startUserSession]);
+  }, [user, remoteSession]);
   
 
   const handleLogoutClick = () => {
@@ -177,17 +169,21 @@ function AppContent({ children }: { children: React.ReactNode }) {
   };
 
   const handleFinalLogout = useCallback(async () => {
+    // Redirect immediately for a faster user experience.
+    // The async cleanup will happen in the background.
+    router.push('/');
+    setIsLogoutFeedbackOpen(false);
+
     try {
         await endUserSession();
         await signOut(auth);
-        setIsLogoutFeedbackOpen(false);
-        router.push('/');
     } catch (error) {
         console.error("Logout failed:", error);
+        // Toast can be shown even after redirect
         toast({
           variant: 'destructive',
           title: 'Logout Failed',
-          description: 'An error occurred while logging out. Please try again.',
+          description: 'An error occurred during cleanup. Please try again.',
         });
     }
   }, [endUserSession, router, toast]);
@@ -229,15 +225,22 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
    const handleSessionExpiredConfirm = async () => {
     setIsSessionExpired(false);
-    // The signOut call might be redundant if the session expired dialog is shown correctly
-    // but it's good for ensuring a clean state.
-    await signOut(auth); 
     localStorage.removeItem('session_id');
+    // The signOut might be redundant if another device already signed in,
+    // but it ensures a clean state on this client.
+    await signOut(auth); 
     router.push('/');
   };
   
   const isAuthPage = ['/', '/forgot-password'].includes(pathname);
   const isAdmin = user?.email === 'gauraveducator2002@gmail.com';
+
+  // Specific handler for admin to ensure quick logout without feedback dialog
+  const handleAdminLogout = () => {
+    router.push('/');
+    endUserSession().then(() => signOut(auth));
+  };
+
 
   if (isAuthPage) {
     return <>{children}</>;
@@ -327,7 +330,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={handleLogoutClick} tooltip="Logout">
+              <SidebarMenuButton onClick={isAdmin ? handleAdminLogout : handleLogoutClick} tooltip="Logout">
                 <LogOut />
                 <span>Logout</span>
               </SidebarMenuButton>
@@ -357,7 +360,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
              {hasMounted && (
                <>
-                {user?.email !== 'gauraveducator2002@gmail.com' && <NotificationCenter />}
+                {!isAdmin && <NotificationCenter />}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button
@@ -387,7 +390,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
                     <DropdownMenuItem onClick={handleResetPassword}>Reset Password</DropdownMenuItem>
                     <DropdownMenuItem disabled>Support</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogoutClick}>Logout</DropdownMenuItem>
+                    <DropdownMenuItem onClick={isAdmin ? handleAdminLogout : handleLogoutClick}>Logout</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
@@ -404,7 +407,6 @@ function AppContent({ children }: { children: React.ReactNode }) {
             onSkip={handleFinalLogout}
         />
       )}
-      {isAdmin && isLogoutFeedbackOpen && handleFinalLogout()}
         <SessionExpiredDialog 
             isOpen={isSessionExpired}
             onConfirm={handleSessionExpiredConfirm}
