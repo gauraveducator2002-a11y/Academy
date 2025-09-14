@@ -73,7 +73,6 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
           items.push(parseFirestoreData({ id: doc.id, ...doc.data() }));
         });
         try {
-          // Attempt to sort by timestamp if it exists, otherwise do not sort.
           if (items.length > 0 && 'timestamp' in items[0] && items[0].timestamp instanceof Date) {
             items.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
           }
@@ -81,7 +80,6 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
           setData(validatedData);
         } catch (error) {
           console.error(`Zod validation failed for ${collectionName}:`, error);
-          // Do not clear data on validation failure to prevent UI flicker / data loss appearance
         } finally {
           setLoading(false);
         }
@@ -89,19 +87,18 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
       (error) => {
         console.error(`Error fetching ${collectionName}: `, error);
         setLoading(false);
-        // Do not clear data on fetch error
       }
     );
 
     return () => unsubscribe();
   }, [collectionName, schema]);
 
-  const addItem = useCallback(async (item: Omit<ItemType, 'id'>): Promise<ItemType> => {
+  const addItem = async (item: Omit<ItemType, 'id'>): Promise<ItemType> => {
     const collectionRef = collection(db, collectionName);
     const serializedItem = serializeForFirestore(item);
     const docRef = await addDoc(collectionRef, serializedItem);
     return { id: docRef.id, ...item } as ItemType;
-  }, [collectionName]);
+  };
 
   const updateItem = useCallback(async (id: string, item: Partial<Omit<ItemType, 'id'>>) => {
     if (!id) return;
@@ -211,4 +208,3 @@ export const useTheme = (defaultValue: 'light' | 'dark', key: string) => {
   
     return [value, setValue] as const;
 };
-
