@@ -126,14 +126,18 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const { data: recentActivity, addItem: addActivity } = useFirestoreCollection('recentActivity', [], z.array(ActivitySchema));
   const { data: transactions, addItem: addTransaction } = useFirestoreCollection('transactions', [], z.array(TransactionSchema));
   const { data: discountCodes, addItem: addDiscountCode, updateItem: updateDiscountCode, deleteItem: deleteDiscountCode } = useFirestoreCollection('discountCodes', [], z.array(DiscountCodeSchema));
-  const { data: pricing, updateData: setPricing } = useFirestoreDocument('pricing', 'default', initialPricing, PricingSchema);
+  const { data: pricing, updateData: updatePricingData } = useFirestoreDocument('pricing', 'default', initialPricing, PricingSchema);
   const { data: quizAttempts, addItem: addQuizAttempt } = useFirestoreCollection('quizAttempts', [], z.array(QuizAttemptSchema));
   const { data: studentUsers, addItem: addStudentUser } = useFirestoreCollection('studentUsers', [], z.array(StudentUserSchema));
   const { data: feedback, addItem: addFeedbackFirestore } = useFirestoreCollection('feedback', [], z.array(FeedbackSchema));
   const { data: notifications, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', [], z.array(NotificationSchema));
   const [theme, setTheme] = useTheme('light', 'theme');
   
-  const { updateData: updateSession, getDoc: getSessionDoc, deleteDoc: deleteSessionDoc } = useFirestoreDocument('sessions', 'default', {}, UserSessionSchema);
+  const { upsert: upsertSession, getDoc: getSessionDoc, deleteDoc: deleteSessionDoc } = useFirestoreDocument('sessions', 'dummy', {}, UserSessionSchema);
+
+  const setPricing = useCallback(async (newPricing: Pricing) => {
+    await updatePricingData(newPricing);
+  },[updatePricingData]);
 
 
   const contentData = subjects.reduce((acc, subject) => {
@@ -148,11 +152,11 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const startUserSession = useCallback(async (userId: string) => {
     const sessionId = uuidv4();
     sessionStorage.setItem('session_id', sessionId);
-    await updateSession(userId, {
+    await upsertSession(userId, {
         activeSessionId: sessionId,
         lastLogin: new Date()
     });
-  }, [updateSession]);
+  }, [upsertSession]);
   
   const isSessionValid = useCallback(async (userId: string) => {
     const currentSessionId = sessionStorage.getItem('session_id');

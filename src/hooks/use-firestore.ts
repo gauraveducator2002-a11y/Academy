@@ -10,15 +10,18 @@ import {
   deleteDoc,
   Timestamp,
   updateDoc,
+  addDoc,
+  getDocs,
+  query,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { z } from 'zod';
 
-const parseFirestoreData = (data: any) => {
+const parseFirestoreData = (data: any): any => {
   if (!data) return data;
   if (data instanceof Timestamp) return data.toDate();
   if (Array.isArray(data)) return data.map(parseFirestoreData);
-  if (typeof data === 'object') {
+  if (typeof data === 'object' && !Array.isArray(data) && data !== null) {
     const newData: { [key: string]: any } = {};
     for (const key in data) {
       newData[key] = parseFirestoreData(data[key]);
@@ -28,7 +31,7 @@ const parseFirestoreData = (data: any) => {
   return data;
 };
 
-const serializeForFirestore = (data: any) => {
+const serializeForFirestore = (data: any): any => {
     if (!data) return data;
     if (data instanceof Date) return Timestamp.fromDate(data);
     if (Array.isArray(data)) return data.map(serializeForFirestore);
@@ -42,7 +45,7 @@ const serializeForFirestore = (data: any) => {
     return data;
   };
 
-export function useFirestoreCollection<T>(
+export function useFirestoreCollection<T extends {id: string}>(
   collectionName: string,
   initialData: T[],
   schema: z.ZodType<T[]>
@@ -51,18 +54,15 @@ export function useFirestoreCollection<T>(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = collection(db, collectionName);
+    const q = query(collection(db, collectionName));
     const unsubscribe = onSnapshot(
       q,
       (querySnapshot) => {
-        const items: T[] = [];
+        const items: any[] = [];
         querySnapshot.forEach((doc) => {
-          const item = parseFirestoreData({ id: doc.id, ...doc.data() });
-          items.push(item);
+          items.push(parseFirestoreData({ id: doc.id, ...doc.data() }));
         });
-
         try {
-          // Sort by timestamp if available for consistent ordering
           if (items.length > 0 && 'timestamp' in items[0] && items[0].timestamp instanceof Date) {
             items.sort((a, b) => (b as any).timestamp.getTime() - (a as any).timestamp.getTime());
           }
@@ -70,9 +70,9 @@ export function useFirestoreCollection<T>(
           setData(validatedData);
         } catch (error) {
           console.error(`Zod validation failed for ${collectionName}:`, error);
+        } finally {
+          setLoading(false);
         }
-        
-        setLoading(false);
       },
       (error) => {
         console.error(`Error fetching ${collectionName}: `, error);
@@ -82,15 +82,13 @@ export function useFirestoreCollection<T>(
 
     return () => unsubscribe();
   }, [collectionName, schema]);
-  
+
   const addItem = useCallback(async (item: Omit<T, 'id'>) => {
-    const docRef = doc(collection(db, collectionName));
-    const newItem = { ...item, id: docRef.id };
-    await setDoc(docRef, serializeForFirestore(item));
-    return newItem;
+    const docRef = await addDoc(collection(db, collectionName), serializeForFirestore(item));
+    return { ...item, id: docRef.id } as T;
   }, [collectionName]);
 
-  const updateItem = useCallback(async (id: string, item: Partial<T>) => {
+  const updateItem = useCallback(async (id: string, item: Partial<Omit<T, 'id'>>) => {
     const docRef = doc(db, collectionName, id);
     await updateDoc(docRef, serializeForFirestore(item));
   }, [collectionName]);
@@ -112,9 +110,8 @@ export function useFirestoreDocument<T>(
   const [data, setData] = useState<T>(initialData);
   const [loading, setLoading] = useState(true);
 
-  const docRef = doc(db, collectionName, docId);
-
   useEffect(() => {
+    const docRef = doc(db, collectionName, docId);
     const unsubscribe = onSnapshot(
       docRef,
       (docSnap) => {
@@ -126,8 +123,6 @@ export function useFirestoreDocument<T>(
           } catch (error) {
             console.error(`Zod validation failed for ${collectionName}/${docId}:`, error);
           }
-        } else if (docId !== 'default') {
-             setDoc(docRef, serializeForFirestore(initialData));
         }
         setLoading(false);
       },
@@ -138,12 +133,12 @@ export function useFirestoreDocument<T>(
     );
 
     return () => unsubscribe();
-  }, [collectionName, docId, initialData, schema, docRef]);
+  }, [collectionName, docId, schema]);
   
-  const updateData = useCallback(async (id: string, newData: any) => {
-    const specificDocRef = doc(db, collectionName, id);
-    await setDoc(specificDocRef, serializeForFirestore(newData), { merge: true });
-  }, [collectionName]);
+  const updateData = useCallback(async (newData: Partial<T>) => {
+    const docRef = doc(db, collectionName, docId);
+    await setDoc(docRef, serializeForFirestore(newData), { merge: true });
+  }, [collectionName, docId]);
   
   const getDoc = useCallback(async (id: string) => {
     const specificDocRef = doc(db, collectionName, id);
@@ -159,12 +154,13 @@ export function useFirestoreDocument<T>(
     await deleteDoc(specificDocRef);
   }, [collectionName]);
 
-  // Special handling for the 'default' document case
-  const updateDefaultData = useCallback(async (newData: T) => {
-    await setDoc(docRef, serializeForFirestore(newData));
-  }, [docRef]);
+  const upsert = useCallback(async (id: string, newData: any) => {
+    const specificDocRef = doc(db, collectionName, id);
+    await setDoc(specificDocRef, serializeForFirestore(newData), { merge: true });
+  }, [collectionName]);
 
-  return { data, loading, updateData: docId === 'default' ? (id: string, newData: T) => updateDefaultData(newData) : updateData, getDoc, deleteDoc: deleteDoc };
+
+  return { data, loading, updateData, getDoc, deleteDoc, upsert };
 }
 
 // Hook for theme which still uses localStorage
