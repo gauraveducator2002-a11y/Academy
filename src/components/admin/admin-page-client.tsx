@@ -18,7 +18,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { FileText, ClipboardList, Award, ExternalLink, Book, Atom, Landmark, Trash2, Pencil, BrainCircuit, History, Users, RefreshCw, Clipboard, MessagesSquare } from 'lucide-react';
+import { FileText, ClipboardList, Award, ExternalLink, Book, Atom, Landmark, Trash2, Pencil, BrainCircuit, History, Users, RefreshCw, Clipboard, MessagesSquare, FileMinus } from 'lucide-react';
 import { classes, subjects } from '@/lib/data';
 import { ContentContext } from '@/context/content-context';
 import { formatDistanceToNow } from 'date-fns';
@@ -43,6 +43,9 @@ const activityIcons = {
   'Added Test': <ClipboardList className="h-5 w-5 text-purple-500" />,
   'Added Quiz': <BrainCircuit className="h-5 w-5 text-blue-500" />,
   'Completed Quiz': <Award className="h-5 w-5 text-accent" />,
+  'Deleted Note': <FileMinus className="h-5 w-5 text-destructive" />,
+  'Deleted Test': <FileMinus className="h-5 w-5 text-destructive" />,
+  'Deleted Quiz': <FileMinus className="h-5 w-5 text-destructive" />,
 } as const;
 
 const subjectIcons: { [key: string]: React.ReactNode } = {

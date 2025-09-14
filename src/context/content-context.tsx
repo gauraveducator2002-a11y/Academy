@@ -185,12 +185,46 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   }, [addNote, addQuiz, addTest, addNotificationCallback]);
 
   const deleteContentCallback = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', id: string) => {
+    let itemToDelete;
+    let activityType: string = '';
+
+    switch (type) {
+        case 'note': 
+            itemToDelete = notes.find(n => n.id === id);
+            activityType = 'Deleted Note';
+            break;
+        case 'quiz':
+            itemToDelete = quizzes.find(q => q.id === id);
+            activityType = 'Deleted Quiz';
+            break;
+        case 'test':
+            itemToDelete = tests.find(t => t.id === id);
+            activityType = 'Deleted Test';
+            break;
+    }
+
+    if (itemToDelete) {
+        const subject = subjects.find(s => s.id === itemToDelete!.subjectId);
+        const classInfo = classes.find(c => c.id === itemToDelete!.classId);
+
+        if (subject && classInfo) {
+            await addActivity({
+                type: activityType,
+                title: itemToDelete.title,
+                subject: subject.name,
+                class: classInfo.id,
+                timestamp: new Date(),
+                fileUrl: null,
+            });
+        }
+    }
+
     switch (type) {
         case 'note': await deleteNote(id); break;
         case 'quiz': await deleteQuiz(id); break;
         case 'test': await deleteTest(id); break;
     }
-  }, [deleteNote, deleteQuiz, deleteTest]);
+  }, [deleteNote, deleteQuiz, deleteTest, addActivity, notes, quizzes, tests]);
   
   const handleAddQuizAttemptCallback = useCallback(async (attempt: Omit<QuizAttempt, 'id'>) => {
     const newAttempt = await addQuizAttempt(attempt) as QuizAttempt;
