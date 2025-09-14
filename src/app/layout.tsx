@@ -2,7 +2,7 @@
 
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { ContentProvider, ContentContext, type Notification, type UserSession } from '@/context/content-context';
+import { ContentProvider, ContentContext, type Notification } from '@/context/content-context';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -136,7 +136,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     const sessionDocRef = doc(db, 'sessions', userId);
     await deleteDoc(sessionDocRef);
   }, []);
-
+  
   const isSessionValid = useCallback(async (userId: string): Promise<boolean> => {
     if (typeof window === 'undefined') return false;
     const localSessionId = localStorage.getItem('session_id');
@@ -159,11 +159,12 @@ function AppContent({ children }: { children: React.ReactNode }) {
           if (valid) {
               setUser(currentUser);
           } else {
+              // This can happen if this is a new login or the session is from another device.
+              // If there's a local session ID, it means this device's session has been overridden.
               if (localStorage.getItem('session_id')) {
-                  // This session is invalid because another one has started
                   setIsSessionExpired(true);
               } else {
-                  // This is a new login
+                  // This is a fresh login, so we start a new session.
                   await startUserSession(currentUser.uid);
                   setUser(currentUser);
               }
@@ -177,19 +178,21 @@ function AppContent({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [isSessionValid, startUserSession, pathname, router]);
 
   useEffect(() => {
     if (!user) return;
-
+    // This interval checks for session validity every 15 seconds.
     const interval = setInterval(async () => {
         if (auth.currentUser) {
             const valid = await isSessionValid(auth.currentUser.uid);
             if (!valid) {
+                // If session is no longer valid, show the dialog and stop the interval.
                 setIsSessionExpired(true);
+                clearInterval(interval);
             }
         }
-    }, 15000); // Check every 15 seconds
+    }, 15000); 
 
     return () => clearInterval(interval);
   }, [user, isSessionValid]);
@@ -254,6 +257,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
    const handleSessionExpiredConfirm = async () => {
     setIsSessionExpired(false);
+    // Don't call endUserSession here because the session is already ended by another device.
     await signOut(auth);
     localStorage.removeItem('session_id');
     router.push('/');
