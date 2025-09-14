@@ -113,8 +113,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLogoutFeedbackOpen, setIsLogoutFeedbackOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
-  const { startUserSession, isSessionValid, endUserSession } = useContext(ContentContext);
-  const [isSessionExpired, setIsSessionExpired] = useState(false);
+  const { startUserSession, endUserSession } = useContext(ContentContext);
 
   useEffect(() => {
     setHasMounted(true);
@@ -124,7 +123,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
         if (currentUser) {
             setUser(currentUser);
-             if (typeof window !== 'undefined' && !sessionStorage.getItem('session_id')) {
+            if (typeof window !== 'undefined' && !sessionStorage.getItem('session_id')) {
                 await startUserSession(currentUser.uid);
             }
         } else {
@@ -136,26 +135,6 @@ function AppContent({ children }: { children: React.ReactNode }) {
     });
     return () => unsubscribe();
   }, [pathname, router, startUserSession]);
-
-   useEffect(() => {
-    if (!user || typeof window === 'undefined') return;
-
-    const interval = setInterval(async () => {
-        const valid = await isSessionValid(user.uid);
-        if (!valid) {
-            setIsSessionExpired(true);
-            clearInterval(interval);
-        }
-    }, 15000); // Check every 15 seconds
-
-    return () => clearInterval(interval);
-  }, [user, isSessionValid]);
-  
-  const handleSessionExpiredConfirm = async () => {
-      await signOut(auth);
-      setIsSessionExpired(false);
-      router.push('/');
-  }
 
   const handleLogoutClick = () => {
     setIsLogoutFeedbackOpen(true);
@@ -356,10 +335,6 @@ function AppContent({ children }: { children: React.ReactNode }) {
           isOpen={isLogoutFeedbackOpen}
           onClose={handleFinalLogout}
           onFeedbackSubmit={handleFinalLogout}
-        />
-        <SessionExpiredDialog
-            isOpen={isSessionExpired}
-            onConfirm={handleSessionExpiredConfirm}
         />
     </SidebarProvider>
   );
