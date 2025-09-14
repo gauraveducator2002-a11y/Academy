@@ -123,13 +123,11 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const { data: notifications, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', z.array(NotificationSchema));
   const [theme, setTheme] = useTheme('light', 'theme');
   
-
   const pricing = pricingData ?? initialPricing;
 
   const setPricingCallback = useCallback(async (newPricing: Pricing) => {
     await updatePricingData(newPricing);
   },[updatePricingData]);
-
 
   const contentData = subjects.reduce((acc, subject) => {
     acc[subject.id] = {
@@ -140,7 +138,6 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     return acc;
   }, {} as ContentData);
   
-
   const addNotificationCallback = useCallback(async (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
     return await addNotificationFirestore({
         ...notification,
@@ -159,8 +156,9 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   }, [notifications, updateNotification]);
 
   const addContentCallback = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', data: any) => {
+    const id = uuidv4();
     let result;
-    const commonData = { ...data, subjectId };
+    const commonData = { ...data, id, subjectId };
     
     switch (type) {
       case 'note': result = await addNote(commonData); break;
@@ -214,7 +212,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
 }, [addQuizAttempt, quizzes, addActivity]);
   
   const addFeedbackCallback = useCallback(async (feedbackData: Omit<Feedback, 'id' | 'timestamp'>) => {
-    return addFeedbackFirestore({ ...feedbackData, timestamp: new Date() });
+    return addFeedbackFirestore({ ...feedbackData, id: uuidv4(), timestamp: new Date() });
   }, [addFeedbackFirestore]);
 
   const value = {
@@ -226,7 +224,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     transactions,
     addTransaction: useCallback(addTransaction, [addTransaction]),
     discountCodes,
-    addDiscountCode: useCallback(addDiscountCode, [addDiscountCode]),
+    addDiscountCode: useCallback((code) => addDiscountCode({...code, id: uuidv4()}), [addDiscountCode]),
     updateDiscountCode: useCallback(updateDiscountCode, [updateDiscountCode]),
     deleteDiscountCode: useCallback(deleteDiscountCode, [deleteDiscountCode]),
     pricing,
@@ -234,7 +232,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     quizAttempts,
     addQuizAttempt: handleAddQuizAttemptCallback,
     studentUsers,
-    addStudentUser: useCallback(addStudentUser, [addStudentUser]),
+    addStudentUser: useCallback((user) => addStudentUser({...user, id: uuidv4()}), [addStudentUser]),
     feedback,
     addFeedback: addFeedbackCallback,
     theme,

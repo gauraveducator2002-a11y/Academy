@@ -54,7 +54,6 @@ export function useFirestoreCollection<T extends {id: string}>(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
     const q = query(collection(db, collectionName));
     const unsubscribe = onSnapshot(
       q,
@@ -86,9 +85,11 @@ export function useFirestoreCollection<T extends {id: string}>(
     return () => unsubscribe();
   }, [collectionName, schema]);
 
-  const addItem = useCallback(async (item: Omit<T, 'id'>) => {
-    const docRef = await addDoc(collection(db, collectionName), serializeForFirestore(item));
-    return { ...item, id: docRef.id } as T;
+  const addItem = useCallback(async (item: T) => {
+    const { id, ...itemData } = item;
+    const docRef = doc(db, collectionName, id);
+    await setDoc(docRef, serializeForFirestore(itemData));
+    return item;
   }, [collectionName]);
 
   const updateItem = useCallback(async (id: string, item: Partial<Omit<T, 'id'>>) => {
@@ -115,10 +116,10 @@ export function useFirestoreDocument<T>(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!docId) {
-      setData(null);
-      setLoading(false);
-      return;
+    if (!docId || typeof docId !== 'string' || docId.trim() === '') {
+        setData(null);
+        setLoading(false);
+        return;
     }
     
     setLoading(true);
