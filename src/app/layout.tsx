@@ -113,7 +113,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLogoutFeedbackOpen, setIsLogoutFeedbackOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
-  const { startUserSession, endUserSession } = useContext(ContentContext);
+  const { endUserSession } = useContext(ContentContext);
 
   useEffect(() => {
     setHasMounted(true);
@@ -123,9 +123,6 @@ function AppContent({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
         if (currentUser) {
             setUser(currentUser);
-            if (typeof window !== 'undefined' && !localStorage.getItem('session_id')) {
-                await startUserSession(currentUser.uid);
-            }
         } else {
             setUser(null);
             if (!['/', '/forgot-password', '/settings'].includes(pathname)) {
@@ -134,19 +131,29 @@ function AppContent({ children }: { children: React.ReactNode }) {
         }
     });
     return () => unsubscribe();
-  }, [pathname, router, startUserSession]);
+  }, [pathname, router]);
 
   const handleLogoutClick = () => {
     setIsLogoutFeedbackOpen(true);
   };
   
   const handleFinalLogout = async () => {
-    if (user) {
-        await endUserSession(user.uid);
-    }
-    await signOut(auth);
     setIsLogoutFeedbackOpen(false);
-    router.push('/');
+    try {
+        const user = auth.currentUser;
+        if (user) {
+            await endUserSession(user.uid);
+        }
+        await signOut(auth);
+        router.push('/');
+    } catch (error) {
+        console.error("Logout failed:", error);
+        toast({
+          variant: 'destructive',
+          title: 'Logout Failed',
+          description: 'An error occurred while logging out. Please try again.',
+        });
+    }
   };
 
   const handleResetPassword = async () => {
@@ -334,7 +341,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       </SidebarInset>
       <LogoutFeedbackDialog
           isOpen={isLogoutFeedbackOpen}
-          onClose={handleFinalLogout}
+          onClose={() => setIsLogoutFeedbackOpen(false)}
           onFeedbackSubmit={handleFinalLogout}
         />
     </SidebarProvider>
