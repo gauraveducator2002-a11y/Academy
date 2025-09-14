@@ -121,23 +121,23 @@ export const ContentContext = createContext<ContentContextType>({
 });
 
 export const ContentProvider = ({ children }: { children: ReactNode }) => {
-  const { data: notes, addItem: addNote, deleteItem: deleteNote } = useFirestoreCollection('notes', [], NotesCollectionSchema);
-  const { data: quizzes, addItem: addQuiz, deleteItem: deleteQuiz } = useFirestoreCollection('quizzes', [], QuizzesCollectionSchema);
-  const { data: tests, addItem: addTest, deleteItem: deleteTest } = useFirestoreCollection('tests', [], TestsCollectionSchema);
-  const { data: recentActivity, addItem: addActivity } = useFirestoreCollection('recentActivity', [], z.array(ActivitySchema));
-  const { data: transactions, addItem: addTransaction } = useFirestoreCollection('transactions', [], z.array(TransactionSchema));
-  const { data: discountCodes, addItem: addDiscountCode, updateItem: updateDiscountCode, deleteItem: deleteDiscountCode } = useFirestoreCollection('discountCodes', [], z.array(DiscountCodeSchema));
+  const { data: notes, addItem: addNote, deleteItem: deleteNote } = useFirestoreCollection('notes', NotesCollectionSchema);
+  const { data: quizzes, addItem: addQuiz, deleteItem: deleteQuiz } = useFirestoreCollection('quizzes', QuizzesCollectionSchema);
+  const { data: tests, addItem: addTest, deleteItem: deleteTest } = useFirestoreCollection('tests', TestsCollectionSchema);
+  const { data: recentActivity, addItem: addActivity } = useFirestoreCollection('recentActivity', z.array(ActivitySchema));
+  const { data: transactions, addItem: addTransaction } = useFirestoreCollection('transactions', z.array(TransactionSchema));
+  const { data: discountCodes, addItem: addDiscountCode, updateItem: updateDiscountCode, deleteItem: deleteDiscountCode } = useFirestoreCollection('discountCodes', z.array(DiscountCodeSchema));
   const { data: pricing, updateData: updatePricingData } = useFirestoreDocument('pricing', 'default', initialPricing, PricingSchema);
-  const { data: quizAttempts, addItem: addQuizAttempt } = useFirestoreCollection('quizAttempts', [], z.array(QuizAttemptSchema));
-  const { data: studentUsers, addItem: addStudentUser } = useFirestoreCollection('studentUsers', [], z.array(StudentUserSchema));
-  const { data: feedback, addItem: addFeedbackFirestore } = useFirestoreCollection('feedback', [], z.array(FeedbackSchema));
-  const { data: notifications, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', [], z.array(NotificationSchema));
+  const { data: quizAttempts, addItem: addQuizAttempt } = useFirestoreCollection('quizAttempts', z.array(QuizAttemptSchema));
+  const { data: studentUsers, addItem: addStudentUser } = useFirestoreCollection('studentUsers', z.array(StudentUserSchema));
+  const { data: feedback, addItem: addFeedbackFirestore } = useFirestoreCollection('feedback', z.array(FeedbackSchema));
+  const { data: notifications, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', z.array(NotificationSchema));
   const [theme, setTheme] = useTheme('light', 'theme');
   
   const { upsert: upsertSession, getDoc: getSessionDoc, deleteDoc: deleteSessionDoc } = useFirestoreDocument('sessions', undefined, initialSession, UserSessionSchema);
 
   const setPricing = useCallback(async (newPricing: Pricing) => {
-    await updatePricingData('default', newPricing);
+    await updatePricingData(newPricing);
   },[updatePricingData]);
 
 
@@ -153,7 +153,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const startUserSession = useCallback(async (userId: string) => {
     if (typeof window === 'undefined') return;
     const sessionId = uuidv4();
-    sessionStorage.setItem('session_id', sessionId);
+    localStorage.setItem('session_id', sessionId);
     await upsertSession(userId, {
         activeSessionId: sessionId,
         lastLogin: new Date()
@@ -162,13 +162,11 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   
   const isSessionValid = useCallback(async (userId: string) => {
     if (typeof window === 'undefined') return false;
-    const currentSessionId = sessionStorage.getItem('session_id');
+    const currentSessionId = localStorage.getItem('session_id');
     if (!currentSessionId) return false;
 
     const sessionDoc = await getSessionDoc(userId);
     if (!sessionDoc) {
-      // This might happen if the session doc was deleted (e.g. on logout)
-      // but the client-side session storage hasn't been cleared yet.
       return false;
     }
     
@@ -177,7 +175,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
 
   const endUserSession = useCallback(async (userId: string) => {
     if (typeof window === 'undefined') return;
-    sessionStorage.removeItem('session_id');
+    localStorage.removeItem('session_id');
     await deleteSessionDoc(userId);
   }, [deleteSessionDoc]);
 

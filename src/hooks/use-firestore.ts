@@ -49,10 +49,9 @@ const serializeForFirestore = (data: any): any => {
 
 export function useFirestoreCollection<T extends {id: string}>(
   collectionName: string,
-  initialData: T[],
   schema: z.ZodType<T[]>
 ) {
-  const [data, setData] = useState<T[]>(initialData);
+  const [data, setData] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -165,20 +164,20 @@ export function useFirestoreDocument<T>(
     return null;
   }, [collectionName, schema]);
 
-  const deleteSpecificDoc = useCallback(async (id: string) => {
+  const deleteDoc = useCallback(async (id: string) => {
     if (typeof id !== 'string' || !id) return;
     const specificDocRef = doc(db, collectionName, id);
     await deleteFirestoreDoc(specificDocRef);
   }, [collectionName]);
   
-  const updateData = useCallback(async (idToUpdate: string, newData: Partial<T>) => {
-    if (typeof idToUpdate !== 'string' || !idToUpdate) return;
-    const docRef = doc(db, collectionName, idToUpdate);
+  const updateData = useCallback(async (newData: Partial<T>) => {
+    if (!docId) return;
+    const docRef = doc(db, collectionName, docId);
     await setDoc(docRef, serializeForFirestore(newData), { merge: true });
-  }, [collectionName]);
+  }, [collectionName, docId]);
 
 
-  return { data, loading, updateData, getDoc, deleteDoc: deleteSpecificDoc, upsert };
+  return { data, loading, updateData, getDoc, deleteDoc, upsert };
 }
 
 
