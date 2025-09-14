@@ -144,6 +144,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         const valid = await isSessionValid(user.uid);
         if (!valid) {
             setIsSessionExpired(true);
+            clearInterval(interval);
         }
     }, 15000); // Check every 15 seconds
 
@@ -164,7 +165,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     if (user) {
         await endUserSession(user.uid);
     }
-    await auth.signOut();
+    await signOut(auth);
     setIsLogoutFeedbackOpen(false);
   };
 
@@ -353,10 +354,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       </SidebarInset>
       <LogoutFeedbackDialog
           isOpen={isLogoutFeedbackOpen}
-          onClose={() => {
-              setIsLogoutFeedbackOpen(false);
-              handleFinalLogout();
-          }}
+          onClose={handleFinalLogout}
           onFeedbackSubmit={handleFinalLogout}
         />
         <SessionExpiredDialog
