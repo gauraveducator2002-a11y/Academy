@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -78,11 +79,11 @@ export function UserManagement() {
         form.setValue('password', password);
     };
 
-    const copyToClipboard = (text: string) => {
+    const copyToClipboard = (text: string, message: string = 'Credentials copied to clipboard.') => {
         navigator.clipboard.writeText(text);
         toast({
             title: 'Copied!',
-            description: 'Credentials copied to clipboard.',
+            description: message,
         });
     };
 
@@ -203,6 +204,7 @@ export function UserManagement() {
                                     <TableHead>Username</TableHead>
                                     <TableHead>Email</TableHead>
                                     <TableHead>Class</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -212,11 +214,22 @@ export function UserManagement() {
                                             <TableCell className="font-medium">{user.username}</TableCell>
                                             <TableCell>{user.email}</TableCell>
                                             <TableCell>Class {user.classId}</TableCell>
+                                            <TableCell className="text-right">
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="icon" 
+                                                    className="h-8 w-8"
+                                                    onClick={() => copyToClipboard(user.username, `Username "${user.username}" copied to clipboard.`)}
+                                                >
+                                                    <Clipboard className="h-4 w-4" />
+                                                    <span className="sr-only">Copy Username</span>
+                                                </Button>
+                                            </TableCell>
                                         </TableRow>
                                     ))
                                 ) : (
                                     <TableRow>
-                                        <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
+                                        <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
                                             No student accounts created yet.
                                         </TableCell>
                                     </TableRow>
