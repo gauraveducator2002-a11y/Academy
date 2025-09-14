@@ -18,8 +18,8 @@ import {
   BellDot,
 } from 'lucide-react';
 import { getAuth, sendPasswordResetEmail, onAuthStateChanged, User, signOut } from 'firebase/auth';
-import { app } from '@/lib/firebase';
-import { useState, useEffect, useContext } from 'react';
+import { app, db } from '@/lib/firebase';
+import { useState, useEffect, useContext, useCallback } from 'react';
 
 import {
   SidebarProvider,
@@ -50,6 +50,8 @@ import { LogoutFeedbackDialog } from '@/components/student/logout-feedback-dialo
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { SessionExpiredDialog } from '@/components/auth/session-expired-dialog';
+import { v4 as uuidv4 } from 'uuid';
+import { doc, getDoc, setDoc, deleteDoc, Timestamp } from 'firebase/firestore';
 
 
 const auth = getAuth(app);
@@ -113,23 +115,58 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLogoutFeedbackOpen, setIsLogoutFeedbackOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
-  const { addFeedback, isSessionValid, startUserSession, endUserSession } = useContext(ContentContext);
+  const { addFeedback } = useContext(ContentContext);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
+
+  const startUserSession = useCallback(async (userId: string) => {
+    if (typeof window === 'undefined') return;
+    const sessionId = uuidv4();
+    localStorage.setItem('session_id', sessionId);
+    const sessionDocRef = doc(db, 'sessions', userId);
+    await setDoc(sessionDocRef, {
+        activeSessionId: sessionId,
+        lastLogin: Timestamp.fromDate(new Date())
+    });
+  }, []);
+
+  const endUserSession = useCallback(async (userId: string) => {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem('session_id');
+    const sessionDocRef = doc(db, 'sessions', userId);
+    await deleteDoc(sessionDocRef);
+  }, []);
+
+  const isSessionValid = useCallback(async (userId: string): Promise<boolean> => {
+    if (typeof window === 'undefined') return false;
+    const localSessionId = localStorage.getItem('session_id');
+    if (!localSessionId) return false;
+
+    const sessionDocRef = doc(db, 'sessions', userId);
+    const docSnap = await getDoc(sessionDocRef);
+
+    if (docSnap.exists()) {
+        return docSnap.data().activeSessionId === localSessionId;
+    }
+    return false;
+  }, []);
 
   useEffect(() => {
     setHasMounted(true);
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        const valid = await isSessionValid(currentUser.uid);
-        if (valid) {
-          setUser(currentUser);
-          if (!localStorage.getItem('session_id')) {
-            await startUserSession(currentUser.uid);
+          const valid = await isSessionValid(currentUser.uid);
+          if (valid) {
+              setUser(currentUser);
+          } else {
+              if (localStorage.getItem('session_id')) {
+                  // This session is invalid because another one has started
+                  setIsSessionExpired(true);
+              } else {
+                  // This is a new login
+                  await startUserSession(currentUser.uid);
+                  setUser(currentUser);
+              }
           }
-        } else {
-          setUser(null);
-          setIsSessionExpired(true);
-        }
       } else {
         setUser(null);
         if (!['/', '/forgot-password'].includes(pathname)) {
@@ -138,28 +175,30 @@ function AppContent({ children }: { children: React.ReactNode }) {
       }
     });
 
-    const interval = setInterval(async () => {
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        const valid = await isSessionValid(currentUser.uid);
-        if (!valid) {
-          setIsSessionExpired(true);
-        }
-      }
-    }, 5000); // Check every 5 seconds
+    return () => unsubscribe();
+  }, [isSessionValid, startUserSession, pathname, router]);
 
-    return () => {
-      unsubscribe();
-      clearInterval(interval);
-    };
-  }, []); // Empty dependency array is correct here
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(async () => {
+        if (auth.currentUser) {
+            const valid = await isSessionValid(auth.currentUser.uid);
+            if (!valid) {
+                setIsSessionExpired(true);
+            }
+        }
+    }, 15000); // Check every 15 seconds
+
+    return () => clearInterval(interval);
+  }, [user, isSessionValid]);
 
 
   const handleLogoutClick = () => {
     setIsLogoutFeedbackOpen(true);
   };
 
-  const handleFinalLogout = async () => {
+  const handleFinalLogout = useCallback(async () => {
     setIsLogoutFeedbackOpen(false);
     try {
         if (auth.currentUser) {
@@ -175,16 +214,16 @@ function AppContent({ children }: { children: React.ReactNode }) {
           description: 'An error occurred while logging out. Please try again.',
         });
     }
-  };
+  }, [endUserSession, router, toast]);
 
-  const handleFeedbackAndLogout = async (details: { studentName: string; feedback: string; suggestion: string; rating: number; }) => {
+  const handleFeedbackAndLogout = useCallback(async (details: { studentName: string; feedback: string; suggestion: string; rating: number; }) => {
     await addFeedback(details);
     toast({
         title: 'Feedback Submitted!',
         description: 'Thank you for your valuable input. Logging you out...',
     });
     await handleFinalLogout();
-  };
+  }, [addFeedback, handleFinalLogout, toast]);
 
   const handleResetPassword = async () => {
     const currentUser = auth.currentUser;
@@ -214,7 +253,9 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
    const handleSessionExpiredConfirm = async () => {
     setIsSessionExpired(false);
-    await handleFinalLogout();
+    await signOut(auth);
+    localStorage.removeItem('session_id');
+    router.push('/');
   };
   
   const isAuthPage = ['/', '/forgot-password'].includes(pathname);
