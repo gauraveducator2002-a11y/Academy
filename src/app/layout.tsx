@@ -2,7 +2,7 @@
 
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { ContentProvider, ContentContext, type Notification } from '@/context/content-context';
+import { ContentProvider, ContentContext, type Notification, type UserSession } from '@/context/content-context';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -20,6 +20,7 @@ import {
 import { getAuth, sendPasswordResetEmail, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app, db } from '@/lib/firebase';
 import { useState, useEffect, useContext, useCallback } from 'react';
+import { useFirestoreDocument } from '@/hooks/use-firestore';
 
 import {
   SidebarProvider,
@@ -176,7 +177,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [isSessionValid, startUserSession, pathname, router]);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -199,12 +200,12 @@ function AppContent({ children }: { children: React.ReactNode }) {
   };
 
   const handleFinalLogout = useCallback(async () => {
-    setIsLogoutFeedbackOpen(false);
     try {
         if (auth.currentUser) {
             await endUserSession(auth.currentUser.uid);
         }
         await signOut(auth);
+        setIsLogoutFeedbackOpen(false);
         router.push('/');
     } catch (error) {
         console.error("Logout failed:", error);
@@ -454,7 +455,7 @@ function RootLayoutContent({
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.Node;
+  children: React.ReactNode;
 }>) {
   return (
     <ContentProvider>

@@ -106,21 +106,25 @@ export function useFirestoreCollection<T extends {id: string}>(
 
 
 export function useFirestoreDocument<T>(
-  collectionName: string,
-  docId: string | null,
+  path: string,
   schema: z.ZodType<T>
 ) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const pathSegments = path.split('/').filter(Boolean);
+
   useEffect(() => {
-    if (!docId) {
-        setData(null);
-        setLoading(false);
-        return;
+    if (pathSegments.length % 2 !== 0) {
+      // Path must have an even number of segments (collection/doc/collection/doc...)
+      // The path given is to a collection, not a document.
+      setData(null);
+      setLoading(false);
+      return;
     }
+    
     setLoading(true);
-    const docRef = doc(db, collectionName, docId);
+    const docRef = doc(db, path);
     const unsubscribe = onSnapshot(
       docRef,
       (docSnap) => {
@@ -130,7 +134,7 @@ export function useFirestoreDocument<T>(
             const validatedData = schema.parse(item);
             setData(validatedData);
           } catch (error) {
-            console.error(`Zod validation failed for ${collectionName}/${docId}:`, error);
+            console.error(`Zod validation failed for ${path}:`, error);
             setData(null);
           }
         } else {
@@ -139,50 +143,22 @@ export function useFirestoreDocument<T>(
         setLoading(false);
       },
       (error) => {
-        console.error(`Error fetching ${collectionName}/${docId}: `, error);
+        console.error(`Error fetching ${path}: `, error);
         setData(null);
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [collectionName, docId, schema]);
-  
-  const upsert = useCallback(async (id: string, newData: any) => {
-    if (typeof id !== 'string' || !id) return;
-    const specificDocRef = doc(db, collectionName, id);
-    await setDoc(specificDocRef, serializeForFirestore(newData), { merge: true });
-  }, [collectionName]);
-  
-  const getDoc = useCallback(async (id: string): Promise<T | null> => {
-    if (typeof id !== 'string' || !id) return null;
-    try {
-        const specificDocRef = doc(db, collectionName, id);
-        const docSnap = await getFirestoreDoc(specificDocRef);
-        if (docSnap.exists()) {
-            const parsed = parseFirestoreData(docSnap.data());
-            return schema.parse(parsed) as T;
-        }
-    } catch (error) {
-        console.error(`Error in getDoc for ${collectionName}/${id}:`, error);
-    }
-    return null;
-  }, [collectionName, schema]);
-
-  const deleteDoc = useCallback(async (id: string) => {
-    if (typeof id !== 'string' || !id) return;
-    const specificDocRef = doc(db, collectionName, id);
-    await deleteFirestoreDoc(specificDocRef);
-  }, [collectionName]);
+  }, [path, schema, pathSegments.length]);
   
   const updateData = useCallback(async (newData: Partial<T>) => {
-    if (!docId) return;
-    const docRef = doc(db, collectionName, docId);
+    if (pathSegments.length % 2 !== 0) return;
+    const docRef = doc(db, path);
     await setDoc(docRef, serializeForFirestore(newData), { merge: true });
-  }, [collectionName, docId]);
+  }, [path, pathSegments.length]);
 
-
-  return { data, loading, updateData, getDoc, deleteDoc, upsert };
+  return { data, loading, updateData };
 }
 
 
