@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { useState, useContext } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
 import { Loader2, MessageSquarePlus, Send, Star } from 'lucide-react';
 import {
   Dialog,
@@ -26,7 +25,6 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { ContentContext } from '@/context/content-context';
 
 const formSchema = z.object({
   studentName: z.string().min(1, 'Please enter your name.'),
@@ -42,17 +40,17 @@ const formSchema = z.object({
 interface LogoutFeedbackDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onFeedbackSubmit: () => void;
+  onFeedbackSubmit: (details: { studentName: string; feedback: string; suggestion: string; rating: number; }) => void;
+  onSkip: () => void;
 }
 
 export function LogoutFeedbackDialog({
   isOpen,
   onClose,
   onFeedbackSubmit,
+  onSkip,
 }: LogoutFeedbackDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  const { addFeedback } = useContext(ContentContext);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -66,31 +64,24 @@ export function LogoutFeedbackDialog({
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    
-    await addFeedback({
+    onFeedbackSubmit({
       studentName: values.studentName,
       feedback: values.feedback || '',
       suggestion: values.suggestion || '',
       rating: values.rating,
     });
-    
-    toast({
-      title: 'Feedback Submitted!',
-      description: 'Thank you for your valuable input. Logging you out...',
-    });
-    
-    setIsLoading(false);
-    onFeedbackSubmit();
-    form.reset();
+    // The parent component will handle closing and logging out
   }
   
-  const handleSkipAndLogout = () => {
-    form.reset();
-    onFeedbackSubmit();
+  const handleClose = () => {
+    if (!isLoading) {
+      form.reset();
+      onClose();
+    }
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose()}}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleClose()}}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -175,7 +166,7 @@ export function LogoutFeedbackDialog({
               )}
             />
             <DialogFooter className="sm:justify-between">
-                <Button type="button" variant="outline" onClick={handleSkipAndLogout}>Skip & Logout</Button>
+                <Button type="button" variant="outline" onClick={onSkip} disabled={isLoading}>Skip & Logout</Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -113,7 +113,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLogoutFeedbackOpen, setIsLogoutFeedbackOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
-  const { endUserSession } = useContext(ContentContext);
+  const { addFeedback, endUserSession } = useContext(ContentContext);
 
   useEffect(() => {
     setHasMounted(true);
@@ -136,7 +136,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const handleLogoutClick = () => {
     setIsLogoutFeedbackOpen(true);
   };
-  
+
   const handleFinalLogout = async () => {
     setIsLogoutFeedbackOpen(false);
     try {
@@ -154,6 +154,15 @@ function AppContent({ children }: { children: React.ReactNode }) {
           description: 'An error occurred while logging out. Please try again.',
         });
     }
+  };
+
+  const handleFeedbackAndLogout = async (details: { studentName: string; feedback: string; suggestion: string; rating: number; }) => {
+    await addFeedback(details);
+    toast({
+        title: 'Feedback Submitted!',
+        description: 'Thank you for your valuable input. Logging you out...',
+    });
+    await handleFinalLogout();
   };
 
   const handleResetPassword = async () => {
@@ -342,7 +351,8 @@ function AppContent({ children }: { children: React.ReactNode }) {
       <LogoutFeedbackDialog
           isOpen={isLogoutFeedbackOpen}
           onClose={() => setIsLogoutFeedbackOpen(false)}
-          onFeedbackSubmit={handleFinalLogout}
+          onFeedbackSubmit={handleFeedbackAndLogout}
+          onSkip={handleFinalLogout}
         />
     </SidebarProvider>
   );
