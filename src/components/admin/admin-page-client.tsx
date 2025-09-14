@@ -55,37 +55,41 @@ export default function AdminPageClient() {
   const { contentData, addContent, recentActivity, addActivity, deleteContent, quizAttempts, feedback } = useContext(ContentContext);
   const [itemToDelete, setItemToDelete] = useState<{ subjectId: string; type: 'note' | 'quiz' | 'test'; item: Note | Quiz | Test; } | null>(null);
 
-  const handleContentAdded = (type: 'note' | 'quiz' | 'test', content: any) => {
-    addContent(content.subjectId, type, content).then(() => {
-        const classInfo = classes.find((c) => c.id === content.classId);
-        const subjectInfo = subjects.find((s) => s.id === content.subjectId);
+  const handleContentAdded = async (type: 'note' | 'quiz' | 'test', content: any) => {
+    try {
+      await addContent(content.subjectId, type, content);
+
+      const classInfo = classes.find((c) => c.id === content.classId);
+      const subjectInfo = subjects.find((s) => s.id === content.subjectId);
+    
+      let activityType: keyof typeof activityIcons | undefined;
+      let activityTitle: string = content.title;
       
-        let activityType: keyof typeof activityIcons | undefined;
-        let activityTitle: string = content.title;
-        
-        switch (type) {
-          case 'note':
-            activityType = 'Added Note';
-            break;
-          case 'quiz':
-            activityType = 'Added Quiz';
-            break;
-          case 'test':
-            activityType = 'Added Test';
-            break;
-        }
-      
-        if (activityType && subjectInfo && classInfo) {
-          addActivity({
-            type: activityType,
-            title: activityTitle,
-            subject: subjectInfo.name,
-            class: classInfo.id,
-            timestamp: new Date(),
-            fileUrl: type === 'note' ? content.fileUrl : null,
-          });
-        }
-    });
+      switch (type) {
+        case 'note':
+          activityType = 'Added Note';
+          break;
+        case 'quiz':
+          activityType = 'Added Quiz';
+          break;
+        case 'test':
+          activityType = 'Added Test';
+          break;
+      }
+    
+      if (activityType && subjectInfo && classInfo) {
+        addActivity({
+          type: activityType,
+          title: activityTitle,
+          subject: subjectInfo.name,
+          class: classInfo.id,
+          timestamp: new Date(),
+          fileUrl: type === 'note' ? content.fileUrl : null,
+        });
+      }
+    } catch (error) {
+      console.error("Failed to add content or activity:", error);
+    }
   };
   
   const handleDelete = () => {
