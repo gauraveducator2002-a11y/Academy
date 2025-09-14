@@ -65,15 +65,15 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
           items.push(parseFirestoreData({ id: doc.id, ...doc.data() }));
         });
         try {
+          // Attempt to sort by timestamp if it exists, otherwise do not sort.
           if (items.length > 0 && 'timestamp' in items[0] && items[0].timestamp instanceof Date) {
-            items.sort((a, b) => (b as any).timestamp.getTime() - (a as any).timestamp.getTime());
+            items.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
           }
           const validatedData = schema.parse(items);
           setData(validatedData);
         } catch (error) {
           console.error(`Zod validation failed for ${collectionName}:`, error);
           // Do not clear data on validation failure to prevent UI flicker / data loss appearance
-          // setData([]); 
         } finally {
           setLoading(false);
         }
@@ -82,7 +82,6 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
         console.error(`Error fetching ${collectionName}: `, error);
         setLoading(false);
         // Do not clear data on fetch error
-        // setData([]);
       }
     );
 
