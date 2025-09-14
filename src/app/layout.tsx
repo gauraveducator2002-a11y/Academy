@@ -164,7 +164,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
       if (typeof window === 'undefined' || !user || !remoteSession) return;
   
       const localSessionId = localStorage.getItem('session_id');
-      if (localSessionId && remoteSession.activeSessionId !== localSessionId) {
+      if (localSessionId && remoteSession.activeSessionId && remoteSession.activeSessionId !== localSessionId) {
           // Another device has logged in.
           setIsSessionExpired(true);
       }
