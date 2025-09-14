@@ -55,6 +55,7 @@ const initialContentData: ContentData = subjects.reduce((acc, subject) => {
 }, {} as ContentData);
 
 const initialPricing: Pricing = { notePriceInr: 830, quizPriceInr: 1245 };
+const initialSession: UserSession = { activeSessionId: '', lastLogin: new Date() };
 
 
 type ContentContextType = {
@@ -133,11 +134,11 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const { data: notifications, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', [], z.array(NotificationSchema));
   const [theme, setTheme] = useTheme('light', 'theme');
   
-  const { upsert: upsertSession, getDoc: getSessionDoc, deleteDoc: deleteSessionDoc } = useFirestoreDocument('sessions', 'dummy', {}, UserSessionSchema);
+  const { upsert: upsertSession, getDoc: getSessionDoc, deleteDoc: deleteSessionDoc } = useFirestoreDocument('sessions', null, initialSession, UserSessionSchema);
 
   const setPricing = useCallback(async (newPricing: Pricing) => {
-    await upsertSession('default', newPricing); // pricing is a singleton document
-  },[upsertSession]);
+    await updatePricingData('default', newPricing);
+  },[updatePricingData]);
 
 
   const contentData = subjects.reduce((acc, subject) => {
@@ -174,7 +175,6 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
 
   const endUserSession = useCallback(async (userId: string) => {
     sessionStorage.removeItem('session_id');
-    // Deleting the session doc ensures other devices know the session is terminated.
     await deleteSessionDoc(userId);
   }, [deleteSessionDoc]);
 
@@ -231,9 +231,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   
   const handleAddQuizAttempt = useCallback(async (attempt: Omit<QuizAttempt, 'id'>) => {
     const newAttempt = await addQuizAttempt(attempt) as QuizAttempt;
-    // The quiz might not be in the state yet if it was just added. Re-fetch all quizzes.
-    const allQuizzes = [...quizzes, ...(contentData[newAttempt.quizId as keyof typeof contentData]?.quizzes || [])];
-    const quiz = allQuizzes.find(q => q.id === attempt.quizId);
+    const quiz = quizzes.find(q => q.id === attempt.quizId);
 
     if (quiz) {
         const subject = subjects.find(s => s.id === quiz.subjectId);
@@ -250,7 +248,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
         }
     }
     return newAttempt;
-  }, [addQuizAttempt, quizzes, contentData, addActivity]);
+  }, [addQuizAttempt, quizzes, addActivity]);
   
   const addFeedback = useCallback(async (feedbackData: Omit<Feedback, 'id' | 'timestamp'>) => {
     return addFeedbackFirestore({ ...feedbackData, timestamp: new Date() });

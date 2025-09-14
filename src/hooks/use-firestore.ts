@@ -103,16 +103,16 @@ export function useFirestoreCollection<T extends {id: string}>(
 
 export function useFirestoreDocument<T>(
   collectionName: string,
-  docId: string,
+  docId: string | null | undefined,
   initialData: T,
   schema: z.ZodType<T>
 ) {
   const [data, setData] = useState<T>(initialData);
   const [loading, setLoading] = useState(true);
 
-  // Listener for a specific document (if docId is not 'dummy')
   useEffect(() => {
-    if (docId === 'dummy') {
+    // Guard against invalid docId
+    if (!docId) {
         setLoading(false);
         return;
     }
@@ -140,12 +140,11 @@ export function useFirestoreDocument<T>(
     return () => unsubscribe();
   }, [collectionName, docId, schema]);
   
-  const updateData = useCallback(async (newData: Partial<T>) => {
-    if (docId === 'dummy') return; // Don't update if it's a dummy/singleton doc hook
-    const docRef = doc(db, collectionName, docId);
-    await setDoc(docRef, serializeForFirestore(newData), { merge: true });
-  }, [collectionName, docId]);
-  
+  const upsert = useCallback(async (id: string, newData: any) => {
+    const specificDocRef = doc(db, collectionName, id);
+    await setDoc(specificDocRef, serializeForFirestore(newData), { merge: true });
+  }, [collectionName]);
+
   const getDoc = useCallback(async (id: string) => {
     const specificDocRef = doc(db, collectionName, id);
     const docSnap = await getDoc(specificDocRef);
@@ -165,15 +164,19 @@ export function useFirestoreDocument<T>(
     const specificDocRef = doc(db, collectionName, id);
     await deleteDoc(specificDocRef);
   }, [collectionName]);
-
-  const upsert = useCallback(async (id: string, newData: any) => {
-    const specificDocRef = doc(db, collectionName, id);
-    await setDoc(specificDocRef, serializeForFirestore(newData), { merge: true });
+  
+  // A generic update function that can be used for any document in the collection
+  // For the singleton "default" document, the ID is handled by the hook consumer
+  const updateData = useCallback(async (idToUpdate: string, newData: Partial<T>) => {
+    if (!idToUpdate) return;
+    const docRef = doc(db, collectionName, idToUpdate);
+    await setDoc(docRef, serializeForFirestore(newData), { merge: true });
   }, [collectionName]);
 
 
   return { data, loading, updateData, getDoc, deleteDoc, upsert };
 }
+
 
 // Hook for theme which still uses localStorage
 export const useTheme = (defaultValue: 'light' | 'dark', key: string) => {
