@@ -200,7 +200,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
         const subject = subjects.find(s => s.id === quiz.subjectId);
         const classInfo = classes.find(c => c.id === quiz.classId);
         if (subject && classInfo) {
-             addActivity({
+             await addActivity({
                 type: 'Completed Quiz',
                 title: quiz.title,
                 subject: subject.name,

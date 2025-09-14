@@ -89,11 +89,11 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
     return () => unsubscribe();
   }, [collectionName, schema]);
 
-  const addItem = useCallback(async (item: Omit<ItemType, 'id'>) => {
+  const addItem = useCallback(async (item: Omit<ItemType, 'id'>): Promise<ItemType> => {
     const collectionRef = collection(db, collectionName);
     const serializedItem = serializeForFirestore(item);
     const docRef = await addDoc(collectionRef, serializedItem);
-    return { id: docRef.id, ...item };
+    return { id: docRef.id, ...item } as ItemType;
   }, [collectionName]);
 
   const updateItem = useCallback(async (id: string, item: Partial<Omit<ItemType, 'id'>>) => {
@@ -204,4 +204,3 @@ export const useTheme = (defaultValue: 'light' | 'dark', key: string) => {
   
     return [value, setValue] as const;
 };
-
