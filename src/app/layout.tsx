@@ -49,8 +49,8 @@ import { Input } from '@/components/ui/input';
 import { LogoutFeedbackDialog } from '@/components/student/logout-feedback-dialog';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { v4 as uuidv4 } from 'uuid';
 import { SessionExpiredDialog } from '@/components/auth/session-expired-dialog';
+
 
 const auth = getAuth(app);
 
@@ -113,7 +113,8 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLogoutFeedbackOpen, setIsLogoutFeedbackOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
-  const { addFeedback, endUserSession } = useContext(ContentContext);
+  const { addFeedback, endUserSession, isSessionValid, startUserSession } = useContext(ContentContext);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
 
   useEffect(() => {
     setHasMounted(true);
@@ -123,15 +124,32 @@ function AppContent({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
         if (currentUser) {
             setUser(currentUser);
+            await startUserSession(currentUser.uid);
         } else {
             setUser(null);
-            if (!['/', '/forgot-password', '/settings'].includes(pathname)) {
+             // Only redirect if not on a public page
+            if (!['/', '/forgot-password'].includes(pathname)) {
                 router.push('/');
             }
         }
     });
     return () => unsubscribe();
-  }, [pathname, router]);
+  }, [pathname, router, startUserSession]);
+
+   useEffect(() => {
+    if (!user) return;
+
+    const intervalId = setInterval(async () => {
+        const valid = await isSessionValid(user.uid);
+        if (!valid) {
+            setIsSessionExpired(true);
+            clearInterval(intervalId);
+        }
+    }, 5000); // Check every 5 seconds
+
+    return () => clearInterval(intervalId);
+  }, [user, isSessionValid]);
+
 
   const handleLogoutClick = () => {
     setIsLogoutFeedbackOpen(true);
@@ -189,6 +207,11 @@ function AppContent({ children }: { children: React.ReactNode }) {
           description: 'No authenticated user email found. Please try logging in again.',
         });
     }
+  };
+
+   const handleSessionExpiredConfirm = async () => {
+    setIsSessionExpired(false);
+    await handleFinalLogout();
   };
   
   const isAuthPage = ['/', '/forgot-password'].includes(pathname);
@@ -353,6 +376,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
           onClose={() => setIsLogoutFeedbackOpen(false)}
           onFeedbackSubmit={handleFeedbackAndLogout}
           onSkip={handleFinalLogout}
+        />
+        <SessionExpiredDialog 
+            isOpen={isSessionExpired}
+            onConfirm={handleSessionExpiredConfirm}
         />
     </SidebarProvider>
   );

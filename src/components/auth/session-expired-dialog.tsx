@@ -28,9 +28,9 @@ export function SessionExpiredDialog({
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
                 <LogOut className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
             </div>
-          <AlertDialogTitle className="text-center">Session End</AlertDialogTitle>
+          <AlertDialogTitle className="text-center">Session Ended</AlertDialogTitle>
           <AlertDialogDescription className="text-center">
-            thank you for login
+            Your session has ended because this account was signed into from another device.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

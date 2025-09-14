@@ -5,7 +5,6 @@ import { z } from 'zod';
 import { classes, subjects } from '@/lib/data';
 import { useFirestoreCollection, useFirestoreDocument, useTheme } from '@/hooks/use-firestore';
 import { v4 as uuidv4 } from 'uuid';
-import { SessionExpiredDialog } from '@/components/auth/session-expired-dialog';
 
 // Zod Schemas for validation
 const NoteSchema = z.object({ id: z.string(), classId: z.string(), subjectId: z.string(), title: z.string(), description: z.string(), fileUrl: z.string(), priceInr: z.number() });
@@ -51,7 +50,6 @@ export type SubjectContent = {
 export type ContentData = Record<string, SubjectContent>;
 
 const initialPricing: Pricing = { notePriceInr: 830, quizPriceInr: 1245 };
-const initialSession: UserSession = { activeSessionId: '', lastLogin: new Date() };
 
 
 type ContentContextType = {
@@ -82,6 +80,7 @@ type ContentContextType = {
   markAllNotificationsAsRead: () => Promise<void>;
   startUserSession: (userId: string) => Promise<void>;
   endUserSession: (userId: string) => Promise<void>;
+  isSessionValid: (userId: string) => Promise<boolean>;
 };
 
 export const ContentContext = createContext<ContentContextType>({
@@ -112,6 +111,7 @@ export const ContentContext = createContext<ContentContextType>({
   markAllNotificationsAsRead: async () => {},
   startUserSession: async () => {},
   endUserSession: async () => {},
+  isSessionValid: async () => true,
 });
 
 export const ContentProvider = ({ children }: { children: ReactNode }) => {
@@ -128,7 +128,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const { data: notifications, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', z.array(NotificationSchema));
   const [theme, setTheme] = useTheme('light', 'theme');
   
-  const { upsert: upsertSession, deleteDoc: deleteSessionDoc } = useFirestoreDocument('sessions', undefined, UserSessionSchema);
+  const { upsert: upsertSession, getDoc: getSessionDoc, deleteDoc: deleteSessionDoc } = useFirestoreDocument('sessions', null, UserSessionSchema);
 
   const setPricing = useCallback(async (newPricing: Pricing) => {
     await updatePricingData(newPricing);
@@ -159,6 +159,19 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem('session_id');
     await deleteSessionDoc(userId);
   }, [deleteSessionDoc]);
+
+  const isSessionValid = useCallback(async (userId: string): Promise<boolean> => {
+    if (typeof window === 'undefined') return false;
+    const localSessionId = localStorage.getItem('session_id');
+    if (!localSessionId) return false;
+
+    const remoteSession = await getSessionDoc(userId);
+    if (!remoteSession) {
+        // If there's no remote session but a local one exists, it's invalid.
+        return false;
+    }
+    return remoteSession.activeSessionId === localSessionId;
+}, [getSessionDoc]);
 
   const addNotification = useCallback(async (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
     return await addNotificationFirestore({
@@ -264,6 +277,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     markAllNotificationsAsRead,
     startUserSession,
     endUserSession,
+    isSessionValid,
   };
 
   return (
