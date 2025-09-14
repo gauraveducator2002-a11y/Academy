@@ -118,9 +118,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [hasMounted, setHasMounted] = useState(false);
   const { addFeedback } = useContext(ContentContext);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
+  const [userId, setUserId] = useState<string | undefined>(undefined);
 
   // Session management logic
-  const { data: remoteSession, updateData: updateRemoteSession, deleteDoc: deleteRemoteSession } = useFirestoreDocument('sessions', user?.uid, UserSessionSchema);
+  const { data: remoteSession, updateData: updateRemoteSession, deleteDoc: deleteRemoteSession } = useFirestoreDocument('sessions', userId, UserSessionSchema);
 
   const startUserSession = useCallback(async (userId: string) => {
     if (typeof window === 'undefined') return;
@@ -138,55 +139,60 @@ function AppContent({ children }: { children: React.ReactNode }) {
     await deleteRemoteSession();
   }, [deleteRemoteSession]);
 
-  useEffect(() => {
-    setHasMounted(true);
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+ useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (!currentUser && !['/', '/forgot-password'].includes(pathname)) {
-        router.push('/');
-      } else if (currentUser) {
+      setUserId(currentUser?.uid);
+      setHasMounted(true);
+
+      if (currentUser) {
+        // User is logged in
         const localSessionId = localStorage.getItem('session_id');
         if (!localSessionId) {
-          await startUserSession(currentUser.uid);
+          // This is a fresh login, start a new session.
+          startUserSession(currentUser.uid);
+        }
+      } else {
+        // User is logged out
+        if (!['/', '/forgot-password'].includes(pathname)) {
+          router.push('/');
         }
       }
     });
+
     return () => unsubscribe();
   }, [pathname, router, startUserSession]);
 
   useEffect(() => {
-    if (user && remoteSession) {
+    if (hasMounted && user && remoteSession) {
       const localSessionId = localStorage.getItem('session_id');
       if (localSessionId && remoteSession.activeSessionId && remoteSession.activeSessionId !== localSessionId) {
         setIsSessionExpired(true);
       }
     }
-  }, [user, remoteSession]);
+  }, [user, remoteSession, hasMounted]);
   
 
   const handleLogoutClick = () => {
-    setIsLogoutFeedbackOpen(true);
+    const isAdmin = user?.email === 'gauraveducator2002@gmail.com';
+    if(isAdmin) {
+      handleAdminLogout();
+    } else {
+      setIsLogoutFeedbackOpen(true);
+    }
   };
 
-  const handleFinalLogout = useCallback(async () => {
-    // Redirect immediately for a faster user experience.
-    // The async cleanup will happen in the background.
+  const handleFinalLogout = useCallback(() => {
     router.push('/');
     setIsLogoutFeedbackOpen(false);
+    endUserSession().then(() => {
+        signOut(auth).catch(error => console.error("Sign out failed:", error));
+    }).catch(error => {
+        console.error("endUserSession failed:", error);
+        signOut(auth).catch(error => console.error("Sign out failed on error path:", error));
+    });
+  }, [endUserSession, router]);
 
-    try {
-        await endUserSession();
-        await signOut(auth);
-    } catch (error) {
-        console.error("Logout failed:", error);
-        // Toast can be shown even after redirect
-        toast({
-          variant: 'destructive',
-          title: 'Logout Failed',
-          description: 'An error occurred during cleanup. Please try again.',
-        });
-    }
-  }, [endUserSession, router, toast]);
 
   const handleFeedbackAndLogout = useCallback(async (details: { studentName: string; feedback: string; suggestion: string; rating: number; }) => {
     addFeedback(details);
@@ -194,7 +200,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         title: 'Feedback Submitted!',
         description: 'Thank you for your valuable input. Logging you out...',
     });
-    await handleFinalLogout();
+    handleFinalLogout();
   }, [addFeedback, handleFinalLogout, toast]);
 
   const handleResetPassword = async () => {
@@ -226,8 +232,6 @@ function AppContent({ children }: { children: React.ReactNode }) {
    const handleSessionExpiredConfirm = async () => {
     setIsSessionExpired(false);
     localStorage.removeItem('session_id');
-    // The signOut might be redundant if another device already signed in,
-    // but it ensures a clean state on this client.
     await signOut(auth); 
     router.push('/');
   };
@@ -235,11 +239,12 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const isAuthPage = ['/', '/forgot-password'].includes(pathname);
   const isAdmin = user?.email === 'gauraveducator2002@gmail.com';
 
-  // Specific handler for admin to ensure quick logout without feedback dialog
-  const handleAdminLogout = () => {
+  const handleAdminLogout = useCallback(() => {
     router.push('/');
-    endUserSession().then(() => signOut(auth));
-  };
+    endUserSession().then(() => {
+        signOut(auth).catch(error => console.error("Admin sign out failed:", error));
+    });
+  }, [endUserSession, router]);
 
 
   if (isAuthPage) {
@@ -330,7 +335,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         <SidebarFooter>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton onClick={isAdmin ? handleAdminLogout : handleLogoutClick} tooltip="Logout">
+              <SidebarMenuButton onClick={handleLogoutClick} tooltip="Logout">
                 <LogOut />
                 <span>Logout</span>
               </SidebarMenuButton>
@@ -390,7 +395,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
                     <DropdownMenuItem onClick={handleResetPassword}>Reset Password</DropdownMenuItem>
                     <DropdownMenuItem disabled>Support</DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={isAdmin ? handleAdminLogout : handleLogoutClick}>Logout</DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleLogoutClick}>Logout</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </>
