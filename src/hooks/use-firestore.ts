@@ -7,7 +7,7 @@ import {
   doc,
   setDoc,
   getDoc as getFirestoreDoc,
-  deleteDoc,
+  deleteDoc as deleteFirestoreDoc,
   Timestamp,
   updateDoc,
   addDoc,
@@ -36,9 +36,11 @@ const serializeForFirestore = (data: any): any => {
     if (data instanceof Date) return Timestamp.fromDate(data);
     if (Array.isArray(data)) return data.map(serializeForFirestore);
     if (typeof data === 'object' && data.constructor === Object) {
-      const newData: { [key: string]: any } = {};
+      const newData: { [key:string]: any } = {};
       for (const key in data) {
-        newData[key] = serializeForFirestore(data[key]);
+        if (data[key] !== undefined) {
+          newData[key] = serializeForFirestore(data[key]);
+        }
       }
       return newData;
     }
@@ -94,7 +96,7 @@ export function useFirestoreCollection<T extends {id: string}>(
   }, [collectionName]);
 
   const deleteItem = useCallback(async (id: string) => {
-    await deleteDoc(doc(db, collectionName, id));
+    await deleteFirestoreDoc(doc(db, collectionName, id));
   }, [collectionName]);
 
   return { data, loading, addItem, updateItem, deleteItem };
@@ -111,9 +113,9 @@ export function useFirestoreDocument<T>(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof docId !== 'string' || !docId) {
-        setLoading(false);
+    if (!docId) {
         setData(initialData);
+        setLoading(false);
         return;
     }
     const docRef = doc(db, collectionName, docId);
@@ -147,27 +149,26 @@ export function useFirestoreDocument<T>(
     const specificDocRef = doc(db, collectionName, id);
     await setDoc(specificDocRef, serializeForFirestore(newData), { merge: true });
   }, [collectionName]);
-
+  
   const getSpecificDoc = useCallback(async (id: string): Promise<T | null> => {
     if (typeof id !== 'string' || !id) return null;
-    const specificDocRef = doc(db, collectionName, id);
-    const docSnap = await getFirestoreDoc(specificDocRef);
-    if (docSnap.exists()) {
-        try {
+    try {
+        const specificDocRef = doc(db, collectionName, id);
+        const docSnap = await getFirestoreDoc(specificDocRef);
+        if (docSnap.exists()) {
             const parsed = parseFirestoreData(docSnap.data());
             return schema.parse(parsed) as T;
-        } catch (error) {
-            console.error(`Zod validation on getSpecificDoc for ${collectionName}/${id} failed:`, error);
-            return null;
         }
+    } catch (error) {
+        console.error(`Error in getSpecificDoc for ${collectionName}/${id}:`, error);
     }
     return null;
   }, [collectionName, schema]);
-  
-  const deleteDoc = useCallback(async (id: string) => {
+
+  const deleteSpecificDoc = useCallback(async (id: string) => {
     if (typeof id !== 'string' || !id) return;
     const specificDocRef = doc(db, collectionName, id);
-    await deleteDoc(specificDocRef);
+    await deleteFirestoreDoc(specificDocRef);
   }, [collectionName]);
   
   const updateData = useCallback(async (idToUpdate: string, newData: Partial<T>) => {
@@ -177,7 +178,7 @@ export function useFirestoreDocument<T>(
   }, [collectionName]);
 
 
-  return { data, loading, updateData, getDoc: getSpecificDoc, deleteDoc, upsert };
+  return { data, loading, updateData, getDoc: getSpecificDoc, deleteDoc: deleteSpecificDoc, upsert };
 }
 
 

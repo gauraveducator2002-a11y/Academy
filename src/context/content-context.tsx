@@ -167,6 +167,8 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
 
     const sessionDoc = await getSessionDoc(userId);
     if (!sessionDoc) {
+      // This might happen if the session doc was deleted (e.g. on logout)
+      // but the client-side session storage hasn't been cleared yet.
       return false;
     }
     
@@ -249,7 +251,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
         }
     }
     return newAttempt;
-  }, [addQuizAttempt, quizzes, addActivity]);
+}, [addQuizAttempt, quizzes, addActivity]);
   
   const addFeedback = useCallback(async (feedbackData: Omit<Feedback, 'id' | 'timestamp'>) => {
     return addFeedbackFirestore({ ...feedbackData, timestamp: new Date() });

@@ -19,27 +19,20 @@ export const db = getFirestore(app);
 
 export const createFirebaseUser = async (email, password) => {
     // We need a secondary app to create users without signing the admin out.
-    // Re-initializing and then deleting the app can cause issues with the primary app's connection.
-    // A safer pattern is to get or create the secondary app and leave it for the session.
-    const secondaryAppName = 'user-creation-app';
+    const secondaryAppName = `user-creation-app-${Date.now()}`;
     let secondaryApp;
     
-    if (getApps().some(app => app.name === secondaryAppName)) {
-        secondaryApp = getApp(secondaryAppName);
-    } else {
-        secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
-    }
-    
-    const secondaryAuth = getAuth(secondaryApp);
-    
     try {
+        secondaryApp = initializeApp(firebaseConfig, secondaryAppName);
+        const secondaryAuth = getAuth(secondaryApp);
         const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-        // User created successfully. Do NOT delete the secondary app as it can interfere
-        // with the main app's connection and cause "client is offline" errors.
         return { success: true, user: userCredential.user };
     } catch (error) {
-        // Log the error but don't delete the app.
         console.error("Error creating user with secondary app:", error);
         return { success: false, error: error };
+    } finally {
+        if (secondaryApp) {
+            await deleteApp(secondaryApp);
+        }
     }
 };
