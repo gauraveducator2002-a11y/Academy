@@ -55,6 +55,7 @@ export function useFirestoreCollection<T extends {id: string}>(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     const q = query(collection(db, collectionName));
     const unsubscribe = onSnapshot(
       q,
@@ -71,6 +72,7 @@ export function useFirestoreCollection<T extends {id: string}>(
           setData(validatedData);
         } catch (error) {
           console.error(`Zod validation failed for ${collectionName}:`, error);
+          setData([]); // Set to empty array on validation failure
         } finally {
           setLoading(false);
         }
@@ -78,6 +80,7 @@ export function useFirestoreCollection<T extends {id: string}>(
       (error) => {
         console.error(`Error fetching ${collectionName}: `, error);
         setLoading(false);
+        setData([]); // Also set to empty on fetch error
       }
     );
 
@@ -104,19 +107,19 @@ export function useFirestoreCollection<T extends {id: string}>(
 
 export function useFirestoreDocument<T>(
   collectionName: string,
-  docId: string | null | undefined,
-  initialData: T,
+  docId: string | null,
   schema: z.ZodType<T>
 ) {
-  const [data, setData] = useState<T>(initialData);
+  const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!docId) {
-        setData(initialData);
+        setData(null);
         setLoading(false);
         return;
     }
+    setLoading(true);
     const docRef = doc(db, collectionName, docId);
     const unsubscribe = onSnapshot(
       docRef,
@@ -128,20 +131,22 @@ export function useFirestoreDocument<T>(
             setData(validatedData);
           } catch (error) {
             console.error(`Zod validation failed for ${collectionName}/${docId}:`, error);
+            setData(null);
           }
         } else {
-          setData(initialData);
+          setData(null);
         }
         setLoading(false);
       },
       (error) => {
         console.error(`Error fetching ${collectionName}/${docId}: `, error);
+        setData(null);
         setLoading(false);
       }
     );
 
     return () => unsubscribe();
-  }, [collectionName, docId, JSON.stringify(initialData), schema]);
+  }, [collectionName, docId, schema]);
   
   const upsert = useCallback(async (id: string, newData: any) => {
     if (typeof id !== 'string' || !id) return;

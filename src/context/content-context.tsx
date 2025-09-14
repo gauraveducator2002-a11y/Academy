@@ -51,7 +51,6 @@ export type ContentData = Record<string, SubjectContent>;
 
 const initialPricing: Pricing = { notePriceInr: 830, quizPriceInr: 1245 };
 
-
 type ContentContextType = {
   contentData: ContentData;
   recentActivity: Activity[];
@@ -121,7 +120,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const { data: recentActivity, addItem: addActivity } = useFirestoreCollection('recentActivity', z.array(ActivitySchema));
   const { data: transactions, addItem: addTransaction } = useFirestoreCollection('transactions', z.array(TransactionSchema));
   const { data: discountCodes, addItem: addDiscountCode, updateItem: updateDiscountCode, deleteItem: deleteDiscountCode } = useFirestoreCollection('discountCodes', z.array(DiscountCodeSchema));
-  const { data: pricing, updateData: updatePricingData } = useFirestoreDocument('pricing', 'default', PricingSchema);
+  const { data: pricingData, updateData: updatePricingData } = useFirestoreDocument('pricing/default', PricingSchema);
   const { data: quizAttempts, addItem: addQuizAttempt } = useFirestoreCollection('quizAttempts', z.array(QuizAttemptSchema));
   const { data: studentUsers, addItem: addStudentUser } = useFirestoreCollection('studentUsers', z.array(StudentUserSchema));
   const { data: feedback, addItem: addFeedbackFirestore } = useFirestoreCollection('feedback', z.array(FeedbackSchema));
@@ -129,6 +128,8 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const [theme, setTheme] = useTheme('light', 'theme');
   
   const { upsert: upsertSession, getDoc: getSessionDoc, deleteDoc: deleteSessionDoc } = useFirestoreDocument('sessions', null, UserSessionSchema);
+
+  const pricing = pricingData ?? initialPricing;
 
   const setPricing = useCallback(async (newPricing: Pricing) => {
     await updatePricingData(newPricing);
