@@ -134,7 +134,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const { data: notifications, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', [], z.array(NotificationSchema));
   const [theme, setTheme] = useTheme('light', 'theme');
   
-  const { upsert: upsertSession, getDoc: getSessionDoc, deleteDoc: deleteSessionDoc } = useFirestoreDocument('sessions', null, initialSession, UserSessionSchema);
+  const { upsert: upsertSession, getDoc: getSessionDoc, deleteDoc: deleteSessionDoc } = useFirestoreDocument('sessions', undefined, initialSession, UserSessionSchema);
 
   const setPricing = useCallback(async (newPricing: Pricing) => {
     await updatePricingData('default', newPricing);
@@ -151,6 +151,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   }, {} as ContentData);
   
   const startUserSession = useCallback(async (userId: string) => {
+    if (typeof window === 'undefined') return;
     const sessionId = uuidv4();
     sessionStorage.setItem('session_id', sessionId);
     await upsertSession(userId, {
@@ -160,13 +161,12 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   }, [upsertSession]);
   
   const isSessionValid = useCallback(async (userId: string) => {
+    if (typeof window === 'undefined') return false;
     const currentSessionId = sessionStorage.getItem('session_id');
     if (!currentSessionId) return false;
 
     const sessionDoc = await getSessionDoc(userId);
     if (!sessionDoc) {
-      // This can happen if the doc is deleted on logout.
-      // We'll treat this as an invalid session to force a logout on the old device.
       return false;
     }
     
@@ -174,6 +174,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   }, [getSessionDoc]);
 
   const endUserSession = useCallback(async (userId: string) => {
+    if (typeof window === 'undefined') return;
     sessionStorage.removeItem('session_id');
     await deleteSessionDoc(userId);
   }, [deleteSessionDoc]);

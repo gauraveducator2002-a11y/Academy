@@ -122,7 +122,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
         if (currentUser) {
             setUser(currentUser);
-             if (!sessionStorage.getItem('session_id')) {
+             if (typeof window !== 'undefined' && !sessionStorage.getItem('session_id')) {
                 await startUserSession(currentUser.uid);
             }
         } else {
@@ -136,17 +136,17 @@ function AppContent({ children }: { children: React.ReactNode }) {
   }, [pathname, router, startUserSession]);
 
    useEffect(() => {
-    if (!user) return;
+    if (!user || typeof window === 'undefined') return;
 
     const interval = setInterval(async () => {
         const valid = await isSessionValid(user.uid);
         if (!valid) {
+            await auth.signOut();
             toast({
                 variant: 'destructive',
                 title: 'Session Expired',
                 description: 'You have been logged out because this account was accessed from another device.',
             });
-            setTimeout(() => auth.signOut(), 3000);
         }
     }, 15000); // Check every 15 seconds
 
@@ -161,8 +161,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     if (user) {
         await endUserSession(user.uid);
     }
-    auth.signOut();
-    router.push('/');
+    await auth.signOut();
     setIsLogoutFeedbackOpen(false);
   };
 
@@ -386,7 +385,7 @@ function RootLayoutContent({
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.Node;
 }>) {
   return (
     <ContentProvider>

@@ -112,8 +112,9 @@ export function useFirestoreDocument<T>(
 
   useEffect(() => {
     // Guard against invalid docId
-    if (!docId) {
+    if (typeof docId !== 'string' || !docId) {
         setLoading(false);
+        setData(initialData);
         return;
     }
     const docRef = doc(db, collectionName, docId);
@@ -128,6 +129,8 @@ export function useFirestoreDocument<T>(
           } catch (error) {
             console.error(`Zod validation failed for ${collectionName}/${docId}:`, error);
           }
+        } else {
+          setData(initialData);
         }
         setLoading(false);
       },
@@ -138,14 +141,16 @@ export function useFirestoreDocument<T>(
     );
 
     return () => unsubscribe();
-  }, [collectionName, docId, schema]);
+  }, [collectionName, docId, schema, initialData]);
   
   const upsert = useCallback(async (id: string, newData: any) => {
+    if (typeof id !== 'string' || !id) return;
     const specificDocRef = doc(db, collectionName, id);
     await setDoc(specificDocRef, serializeForFirestore(newData), { merge: true });
   }, [collectionName]);
 
   const getDoc = useCallback(async (id: string) => {
+    if (typeof id !== 'string' || !id) return null;
     const specificDocRef = doc(db, collectionName, id);
     const docSnap = await getDoc(specificDocRef);
     if (docSnap.exists()) {
@@ -161,14 +166,13 @@ export function useFirestoreDocument<T>(
   }, [collectionName, schema]);
   
   const deleteDoc = useCallback(async (id: string) => {
+    if (typeof id !== 'string' || !id) return;
     const specificDocRef = doc(db, collectionName, id);
     await deleteDoc(specificDocRef);
   }, [collectionName]);
   
-  // A generic update function that can be used for any document in the collection
-  // For the singleton "default" document, the ID is handled by the hook consumer
   const updateData = useCallback(async (idToUpdate: string, newData: Partial<T>) => {
-    if (!idToUpdate) return;
+    if (typeof idToUpdate !== 'string' || !idToUpdate) return;
     const docRef = doc(db, collectionName, idToUpdate);
     await setDoc(docRef, serializeForFirestore(newData), { merge: true });
   }, [collectionName]);
