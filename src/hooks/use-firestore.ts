@@ -72,7 +72,8 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
           setData(validatedData);
         } catch (error) {
           console.error(`Zod validation failed for ${collectionName}:`, error);
-          setData([]); // Set to empty array on validation failure
+          // Do not clear data on validation failure to prevent UI flicker / data loss appearance
+          // setData([]); 
         } finally {
           setLoading(false);
         }
@@ -80,7 +81,8 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
       (error) => {
         console.error(`Error fetching ${collectionName}: `, error);
         setLoading(false);
-        setData([]); // Also set to empty on fetch error
+        // Do not clear data on fetch error
+        // setData([]);
       }
     );
 
@@ -89,7 +91,8 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
 
   const addItem = useCallback(async (item: Omit<ItemType, 'id'>) => {
     const collectionRef = collection(db, collectionName);
-    const docRef = await addDoc(collectionRef, serializeForFirestore(item));
+    const serializedItem = serializeForFirestore(item);
+    const docRef = await addDoc(collectionRef, serializedItem);
     return { id: docRef.id, ...item };
   }, [collectionName]);
 
@@ -201,3 +204,4 @@ export const useTheme = (defaultValue: 'light' | 'dark', key: string) => {
   
     return [value, setValue] as const;
 };
+
