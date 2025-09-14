@@ -2,7 +2,7 @@
 
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { ContentProvider, ContentContext } from '@/context/content-context';
+import { ContentProvider, ContentContext, type Notification } from '@/context/content-context';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -41,10 +41,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-  DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -53,7 +49,7 @@ import { Input } from '@/components/ui/input';
 import { LogoutFeedbackDialog } from '@/components/student/logout-feedback-dialog';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-import type { Notification } from '@/context/content-context';
+import { v4 as uuidv4 } from 'uuid';
 
 const auth = getAuth(app);
 
@@ -116,26 +112,55 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLogoutFeedbackOpen, setIsLogoutFeedbackOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
+  const { startUserSession, isSessionValid, endUserSession } = useContext(ContentContext);
 
   useEffect(() => {
     setHasMounted(true);
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      if (!currentUser && !['/', '/forgot-password', '/settings'].includes(pathname)) {
-        router.push('/');
-      }
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+        if (currentUser) {
+            setUser(currentUser);
+             if (!sessionStorage.getItem('session_id')) {
+                await startUserSession(currentUser.uid);
+            }
+        } else {
+            setUser(null);
+            if (!['/', '/forgot-password', '/settings'].includes(pathname)) {
+                router.push('/');
+            }
+        }
     });
     return () => unsubscribe();
-  }, [pathname, router]);
+  }, [pathname, router, startUserSession]);
+
+   useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(async () => {
+        const valid = await isSessionValid(user.uid);
+        if (!valid) {
+            toast({
+                variant: 'destructive',
+                title: 'Session Expired',
+                description: 'You have been logged out because this account was accessed from another device.',
+            });
+            setTimeout(() => auth.signOut(), 3000);
+        }
+    }, 15000); // Check every 15 seconds
+
+    return () => clearInterval(interval);
+  }, [user, isSessionValid, toast]);
 
   const handleLogoutClick = () => {
     setIsLogoutFeedbackOpen(true);
   };
   
-  const handleFinalLogout = () => {
+  const handleFinalLogout = async () => {
+    if (user) {
+        await endUserSession(user.uid);
+    }
     auth.signOut();
     router.push('/');
     setIsLogoutFeedbackOpen(false);
@@ -266,21 +291,21 @@ function AppContent({ children }: { children: React.ReactNode }) {
       <SidebarInset>
         <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6">
           <div className="flex items-center gap-2">
-            {hasMounted && <SidebarTrigger className="md:hidden" />}
             <div className="flex-1">
-              <form>
+                {hasMounted && <SidebarTrigger className="md:hidden" />}
+            </div>
+            <form>
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
                     type="search"
                     placeholder="Search content..."
                     className="w-full appearance-none bg-background pl-8 shadow-none md:w-2/3 lg:w-1/3"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                  />
+                />
                 </div>
-              </form>
-            </div>
+            </form>
           </div>
           <div className="flex items-center gap-2">
              {hasMounted && (

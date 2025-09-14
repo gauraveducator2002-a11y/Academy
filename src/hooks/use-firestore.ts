@@ -6,11 +6,10 @@ import {
   onSnapshot,
   doc,
   setDoc,
+  getDoc,
   deleteDoc,
   Timestamp,
   updateDoc,
-  getDocs,
-  writeBatch,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { z } from 'zod';
@@ -113,8 +112,9 @@ export function useFirestoreDocument<T>(
   const [data, setData] = useState<T>(initialData);
   const [loading, setLoading] = useState(true);
 
+  const docRef = doc(db, collectionName, docId);
+
   useEffect(() => {
-    const docRef = doc(db, collectionName, docId);
     const unsubscribe = onSnapshot(
       docRef,
       (docSnap) => {
@@ -126,9 +126,8 @@ export function useFirestoreDocument<T>(
           } catch (error) {
             console.error(`Zod validation failed for ${collectionName}/${docId}:`, error);
           }
-        } else {
-            // If doc doesn't exist, create it with initial data
-            setDoc(docRef, serializeForFirestore(initialData));
+        } else if (docId !== 'default') {
+             setDoc(docRef, serializeForFirestore(initialData));
         }
         setLoading(false);
       },
@@ -139,14 +138,33 @@ export function useFirestoreDocument<T>(
     );
 
     return () => unsubscribe();
-  }, [collectionName, docId, initialData, schema]);
+  }, [collectionName, docId, initialData, schema, docRef]);
   
-  const updateData = useCallback(async (newData: T) => {
-    const docRef = doc(db, collectionName, docId);
-    await setDoc(docRef, serializeForFirestore(newData));
-  }, [collectionName, docId]);
+  const updateData = useCallback(async (id: string, newData: any) => {
+    const specificDocRef = doc(db, collectionName, id);
+    await setDoc(specificDocRef, serializeForFirestore(newData), { merge: true });
+  }, [collectionName]);
+  
+  const getDoc = useCallback(async (id: string) => {
+    const specificDocRef = doc(db, collectionName, id);
+    const docSnap = await getDoc(specificDocRef);
+    if (docSnap.exists()) {
+        return parseFirestoreData(docSnap.data()) as T;
+    }
+    return null;
+  }, [collectionName]);
+  
+  const deleteDoc = useCallback(async (id: string) => {
+    const specificDocRef = doc(db, collectionName, id);
+    await deleteDoc(specificDocRef);
+  }, [collectionName]);
 
-  return { data, loading, updateData };
+  // Special handling for the 'default' document case
+  const updateDefaultData = useCallback(async (newData: T) => {
+    await setDoc(docRef, serializeForFirestore(newData));
+  }, [docRef]);
+
+  return { data, loading, updateData: docId === 'default' ? updateDefaultData : updateData, getDoc, deleteDoc: deleteDoc };
 }
 
 // Hook for theme which still uses localStorage

@@ -4,6 +4,7 @@ import React, { createContext, useState, ReactNode, useCallback, useEffect } fro
 import { z } from 'zod';
 import { classes, subjects } from '@/lib/data';
 import { useFirestoreCollection, useFirestoreDocument, useTheme } from '@/hooks/use-firestore';
+import { v4 as uuidv4 } from 'uuid';
 
 // Zod Schemas for validation
 const NoteSchema = z.object({ id: z.string(), classId: z.string(), subjectId: z.string(), title: z.string(), description: z.string(), fileUrl: z.string(), priceInr: z.number() });
@@ -18,6 +19,7 @@ const PricingSchema = z.object({ notePriceInr: z.number(), quizPriceInr: z.numbe
 const StudentUserSchema = z.object({ id: z.string(), username: z.string(), email: z.string(), classId: z.string() });
 const FeedbackSchema = z.object({ id: z.string(), studentName: z.string(), feedback: z.string(), suggestion: z.string(), rating: z.number(), timestamp: z.date() });
 const NotificationSchema = z.object({ id: z.string(), title: z.string(), message: z.string(), timestamp: z.date(), read: z.boolean(), classId: z.string(), subjectId: z.string() });
+const UserSessionSchema = z.object({ activeSessionId: z.string(), lastLogin: z.date() });
 
 // Collection Schemas
 const NotesCollectionSchema = z.array(NoteSchema);
@@ -38,6 +40,7 @@ export type StudentUser = z.infer<typeof StudentUserSchema>;
 export type Feedback = z.infer<typeof FeedbackSchema>;
 export type Theme = 'light' | 'dark';
 export type Notification = z.infer<typeof NotificationSchema>;
+export type UserSession = z.infer<typeof UserSessionSchema>;
 
 export type SubjectContent = {
   notes: Note[];
@@ -80,6 +83,9 @@ type ContentContextType = {
   addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => Promise<any>;
   markNotificationAsRead: (notificationId: string) => Promise<void>;
   markAllNotificationsAsRead: () => Promise<void>;
+  startUserSession: (userId: string) => Promise<void>;
+  isSessionValid: (userId: string) => Promise<boolean>;
+  endUserSession: (userId: string) => Promise<void>;
 };
 
 export const ContentContext = createContext<ContentContextType>({
@@ -108,6 +114,9 @@ export const ContentContext = createContext<ContentContextType>({
   addNotification: async () => {},
   markNotificationAsRead: async () => {},
   markAllNotificationsAsRead: async () => {},
+  startUserSession: async () => {},
+  isSessionValid: async () => true,
+  endUserSession: async () => {},
 });
 
 export const ContentProvider = ({ children }: { children: ReactNode }) => {
@@ -123,6 +132,9 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const { data: feedback, addItem: addFeedbackFirestore } = useFirestoreCollection('feedback', [], z.array(FeedbackSchema));
   const { data: notifications, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', [], z.array(NotificationSchema));
   const [theme, setTheme] = useTheme('light', 'theme');
+  
+  const { updateData: updateSession, getDoc: getSessionDoc, deleteDoc: deleteSessionDoc } = useFirestoreDocument('sessions', 'default', {}, UserSessionSchema);
+
 
   const contentData = subjects.reduce((acc, subject) => {
     acc[subject.id] = {
@@ -132,6 +144,30 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     };
     return acc;
   }, {} as ContentData);
+  
+  const startUserSession = useCallback(async (userId: string) => {
+    const sessionId = uuidv4();
+    sessionStorage.setItem('session_id', sessionId);
+    await updateSession(userId, {
+        activeSessionId: sessionId,
+        lastLogin: new Date()
+    });
+  }, [updateSession]);
+  
+  const isSessionValid = useCallback(async (userId: string) => {
+    const currentSessionId = sessionStorage.getItem('session_id');
+    if (!currentSessionId) return false;
+
+    const sessionDoc = await getSessionDoc(userId);
+    if (!sessionDoc) return false;
+    
+    return sessionDoc.activeSessionId === currentSessionId;
+  }, [getSessionDoc]);
+
+  const endUserSession = useCallback(async (userId: string) => {
+    sessionStorage.removeItem('session_id');
+    await deleteSessionDoc(userId);
+  }, [deleteSessionDoc]);
 
   const addNotification = useCallback(async (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
     return await addNotificationFirestore({
@@ -233,6 +269,9 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     addNotification,
     markNotificationAsRead,
     markAllNotificationsAsRead,
+    startUserSession,
+    isSessionValid,
+    endUserSession,
   };
 
   return (
