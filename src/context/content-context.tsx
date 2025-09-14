@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { classes, subjects } from '@/lib/data';
 import { useFirestoreCollection, useFirestoreDocument, useTheme } from '@/hooks/use-firestore';
 import { v4 as uuidv4 } from 'uuid';
+import { SessionExpiredDialog } from '@/components/auth/session-expired-dialog';
 
 // Zod Schemas for validation
 const NoteSchema = z.object({ id: z.string(), classId: z.string(), subjectId: z.string(), title: z.string(), description: z.string(), fileUrl: z.string(), priceInr: z.number() });
@@ -49,11 +50,6 @@ export type SubjectContent = {
 };
 export type ContentData = Record<string, SubjectContent>;
 
-const initialContentData: ContentData = subjects.reduce((acc, subject) => {
-    acc[subject.id] = { notes: [], quizzes: [], tests: [] };
-    return acc;
-}, {} as ContentData);
-
 const initialPricing: Pricing = { notePriceInr: 830, quizPriceInr: 1245 };
 const initialSession: UserSession = { activeSessionId: '', lastLogin: new Date() };
 
@@ -85,12 +81,11 @@ type ContentContextType = {
   markNotificationAsRead: (notificationId: string) => Promise<void>;
   markAllNotificationsAsRead: () => Promise<void>;
   startUserSession: (userId: string) => Promise<void>;
-  isSessionValid: (userId: string) => Promise<boolean>;
   endUserSession: (userId: string) => Promise<void>;
 };
 
 export const ContentContext = createContext<ContentContextType>({
-  contentData: initialContentData,
+  contentData: {},
   recentActivity: [],
   transactions: [],
   discountCodes: [],
@@ -116,7 +111,6 @@ export const ContentContext = createContext<ContentContextType>({
   markNotificationAsRead: async () => {},
   markAllNotificationsAsRead: async () => {},
   startUserSession: async () => {},
-  isSessionValid: async () => true,
   endUserSession: async () => {},
 });
 
@@ -127,14 +121,14 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const { data: recentActivity, addItem: addActivity } = useFirestoreCollection('recentActivity', z.array(ActivitySchema));
   const { data: transactions, addItem: addTransaction } = useFirestoreCollection('transactions', z.array(TransactionSchema));
   const { data: discountCodes, addItem: addDiscountCode, updateItem: updateDiscountCode, deleteItem: deleteDiscountCode } = useFirestoreCollection('discountCodes', z.array(DiscountCodeSchema));
-  const { data: pricing, updateData: updatePricingData } = useFirestoreDocument('pricing', 'default', initialPricing, PricingSchema);
+  const { data: pricing, updateData: updatePricingData } = useFirestoreDocument('pricing', 'default', PricingSchema);
   const { data: quizAttempts, addItem: addQuizAttempt } = useFirestoreCollection('quizAttempts', z.array(QuizAttemptSchema));
   const { data: studentUsers, addItem: addStudentUser } = useFirestoreCollection('studentUsers', z.array(StudentUserSchema));
   const { data: feedback, addItem: addFeedbackFirestore } = useFirestoreCollection('feedback', z.array(FeedbackSchema));
   const { data: notifications, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', z.array(NotificationSchema));
   const [theme, setTheme] = useTheme('light', 'theme');
   
-  const { upsert: upsertSession, getDoc: getSessionDoc, deleteDoc: deleteSessionDoc } = useFirestoreDocument('sessions', undefined, initialSession, UserSessionSchema);
+  const { upsert: upsertSession, deleteDoc: deleteSessionDoc } = useFirestoreDocument('sessions', undefined, UserSessionSchema);
 
   const setPricing = useCallback(async (newPricing: Pricing) => {
     await updatePricingData(newPricing);
@@ -160,19 +154,6 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [upsertSession]);
   
-  const isSessionValid = useCallback(async (userId: string) => {
-    if (typeof window === 'undefined') return false;
-    const currentSessionId = localStorage.getItem('session_id');
-    if (!currentSessionId) return false;
-
-    const sessionDoc = await getSessionDoc(userId);
-    if (!sessionDoc) {
-      return false;
-    }
-    
-    return sessionDoc.activeSessionId === currentSessionId;
-  }, [getSessionDoc]);
-
   const endUserSession = useCallback(async (userId: string) => {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('session_id');
@@ -282,7 +263,6 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     markNotificationAsRead,
     markAllNotificationsAsRead,
     startUserSession,
-    isSessionValid,
     endUserSession,
   };
 

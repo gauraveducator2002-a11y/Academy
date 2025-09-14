@@ -24,7 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogClose,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import { ContentContext } from '@/context/content-context';
@@ -85,13 +84,13 @@ export function LogoutFeedbackDialog({
     form.reset();
   }
   
-  const handleClose = () => {
+  const handleSkipAndLogout = () => {
     form.reset();
     onClose();
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleSkipAndLogout()}}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -176,9 +175,7 @@ export function LogoutFeedbackDialog({
               )}
             />
             <DialogFooter className="sm:justify-between">
-                <DialogClose asChild>
-                    <Button type="button" variant="outline">Skip & Logout</Button>
-                </DialogClose>
+                <Button type="button" variant="outline" onClick={handleSkipAndLogout}>Skip & Logout</Button>
               <Button type="submit" disabled={isLoading}>
                 {isLoading ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

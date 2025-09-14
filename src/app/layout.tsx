@@ -123,7 +123,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
         if (currentUser) {
             setUser(currentUser);
-            if (typeof window !== 'undefined' && !sessionStorage.getItem('session_id')) {
+            if (typeof window !== 'undefined' && !localStorage.getItem('session_id')) {
                 await startUserSession(currentUser.uid);
             }
         } else {
@@ -146,6 +146,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     }
     await signOut(auth);
     setIsLogoutFeedbackOpen(false);
+    router.push('/');
   };
 
   const handleResetPassword = async () => {
