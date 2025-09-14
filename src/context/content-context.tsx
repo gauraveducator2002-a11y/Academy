@@ -168,7 +168,6 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
 
     const remoteSession = await getSessionDoc(userId);
     if (!remoteSession) {
-        // If there's no remote session but a local one exists, it's invalid.
         return false;
     }
     return remoteSession.activeSessionId === localSessionId;

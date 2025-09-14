@@ -113,7 +113,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLogoutFeedbackOpen, setIsLogoutFeedbackOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
-  const { addFeedback, endUserSession, isSessionValid, startUserSession } = useContext(ContentContext);
+  const { addFeedback, isSessionValid, startUserSession, endUserSession } = useContext(ContentContext);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
 
   useEffect(() => {
@@ -123,10 +123,19 @@ function AppContent({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
         if (currentUser) {
-            setUser(currentUser);
-            await startUserSession(currentUser.uid);
+            const valid = await isSessionValid(currentUser.uid);
+            if (valid) {
+                setUser(currentUser);
+                await startUserSession(currentUser.uid);
+            } else {
+                setIsSessionExpired(true);
+            }
         } else {
             setUser(null);
+            const localSessionId = localStorage.getItem('session_id');
+            if (localSessionId) {
+                endUserSession(localSessionId);
+            }
              // Only redirect if not on a public page
             if (!['/', '/forgot-password'].includes(pathname)) {
                 router.push('/');
@@ -134,7 +143,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         }
     });
     return () => unsubscribe();
-  }, [pathname, router, startUserSession]);
+  }, [pathname, router, startUserSession, isSessionValid, endUserSession]);
 
    useEffect(() => {
     if (!user) return;
@@ -158,9 +167,8 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const handleFinalLogout = async () => {
     setIsLogoutFeedbackOpen(false);
     try {
-        const user = auth.currentUser;
-        if (user) {
-            await endUserSession(user.uid);
+        if (auth.currentUser) {
+            await endUserSession(auth.currentUser.uid);
         }
         await signOut(auth);
         router.push('/');
