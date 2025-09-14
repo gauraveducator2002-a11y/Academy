@@ -86,11 +86,11 @@ export function LogoutFeedbackDialog({
   
   const handleSkipAndLogout = () => {
     form.reset();
-    onClose();
+    onFeedbackSubmit();
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) handleSkipAndLogout()}}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose()}}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
