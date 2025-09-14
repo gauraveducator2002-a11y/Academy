@@ -50,6 +50,11 @@ export type SubjectContent = {
 export type ContentData = Record<string, SubjectContent>;
 
 const initialPricing: Pricing = { notePriceInr: 830, quizPriceInr: 1245 };
+const initialContentData = subjects.reduce((acc, subject) => {
+    acc[subject.id] = { notes: [], quizzes: [], tests: [] };
+    return acc;
+}, {} as ContentData);
+
 
 type ContentContextType = {
   contentData: ContentData;
@@ -80,7 +85,7 @@ type ContentContextType = {
 };
 
 export const ContentContext = createContext<ContentContextType>({
-  contentData: {},
+  contentData: initialContentData,
   recentActivity: [],
   transactions: [],
   discountCodes: [],
@@ -222,8 +227,8 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     addTransaction: useCallback((transaction: Omit<Transaction, 'id'>) => addTransaction(transaction), [addTransaction]),
     discountCodes,
     addDiscountCode: useCallback((code: Omit<DiscountCode, 'id'>) => addDiscountCode(code), [addDiscountCode]),
-    updateDiscountCode: useCallback(updateDiscountCode, [updateDiscountCode]),
-    deleteDiscountCode: useCallback(deleteDiscountCode, [deleteDiscountCode]),
+    updateDiscountCode: useCallback((code: DiscountCode) => updateDiscountCode(code.id, code), [updateDiscountCode]),
+    deleteDiscountCode: useCallback((id: string) => deleteDiscountCode(id), [deleteDiscountCode]),
     pricing,
     setPricing: setPricingCallback,
     quizAttempts,

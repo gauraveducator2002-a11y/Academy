@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -14,7 +15,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { z } from 'zod';
-import { v4 as uuidv4 } from 'uuid';
 
 const parseFirestoreData = (data: any): any => {
   if (!data) return data;
@@ -90,7 +90,7 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
   const addItem = useCallback(async (item: Omit<ItemType, 'id'>) => {
     const collectionRef = collection(db, collectionName);
     const docRef = await addDoc(collectionRef, serializeForFirestore(item));
-    return { ...item, id: docRef.id };
+    return { id: docRef.id, ...item };
   }, [collectionName]);
 
   const updateItem = useCallback(async (id: string, item: Partial<Omit<ItemType, 'id'>>) => {
