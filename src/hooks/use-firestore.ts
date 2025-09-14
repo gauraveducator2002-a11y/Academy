@@ -150,7 +150,7 @@ export function useFirestoreDocument<T>(
     await setDoc(specificDocRef, serializeForFirestore(newData), { merge: true });
   }, [collectionName]);
   
-  const getSpecificDoc = useCallback(async (id: string): Promise<T | null> => {
+  const getDoc = useCallback(async (id: string): Promise<T | null> => {
     if (typeof id !== 'string' || !id) return null;
     try {
         const specificDocRef = doc(db, collectionName, id);
@@ -160,7 +160,7 @@ export function useFirestoreDocument<T>(
             return schema.parse(parsed) as T;
         }
     } catch (error) {
-        console.error(`Error in getSpecificDoc for ${collectionName}/${id}:`, error);
+        console.error(`Error in getDoc for ${collectionName}/${id}:`, error);
     }
     return null;
   }, [collectionName, schema]);
@@ -178,7 +178,7 @@ export function useFirestoreDocument<T>(
   }, [collectionName]);
 
 
-  return { data, loading, updateData, getDoc: getSpecificDoc, deleteDoc: deleteSpecificDoc, upsert };
+  return { data, loading, updateData, getDoc, deleteDoc: deleteSpecificDoc, upsert };
 }
 
 
