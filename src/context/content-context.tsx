@@ -1,10 +1,10 @@
+
 'use client';
 
 import React, { createContext, useState, ReactNode, useCallback, useEffect } from 'react';
 import { z } from 'zod';
 import { classes, subjects } from '@/lib/data';
 import { useFirestoreCollection, useFirestoreDocument, useTheme } from '@/hooks/use-firestore';
-import { v4 as uuidv4 } from 'uuid';
 
 // Zod Schemas for validation
 const NoteSchema = z.object({ id: z.string(), classId: z.string(), subjectId: z.string(), title: z.string(), description: z.string(), fileUrl: z.string(), priceInr: z.number() });
@@ -127,11 +127,11 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     await updatePricingData(newPricing);
   },[updatePricingData]);
 
-  const contentData = subjects.reduce((acc, subject) => {
+  const contentData: ContentData = subjects.reduce((acc, subject) => {
     acc[subject.id] = {
-        notes: notes.filter(n => n.subjectId === subject.id),
-        quizzes: quizzes.filter(q => q.subjectId === subject.id),
-        tests: tests.filter(t => t.subjectId === subject.id),
+      notes: notes.filter(n => n.subjectId === subject.id),
+      quizzes: quizzes.filter(q => q.subjectId === subject.id),
+      tests: tests.filter(t => t.subjectId === subject.id),
     };
     return acc;
   }, {} as ContentData);
