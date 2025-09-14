@@ -122,42 +122,33 @@ function AppContent({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-        if (currentUser) {
-            const valid = await isSessionValid(currentUser.uid);
-            if (valid) {
-                setUser(currentUser);
-                await startUserSession(currentUser.uid);
-            } else {
-                setIsSessionExpired(true);
-            }
+      if (currentUser) {
+        const valid = await isSessionValid(currentUser.uid);
+        if (valid) {
+          setUser(currentUser);
+          // Only start a new session if one isn't already set
+          if (!localStorage.getItem('session_id')) {
+            await startUserSession(currentUser.uid);
+          }
         } else {
-            setUser(null);
-            const localSessionId = localStorage.getItem('session_id');
-            if (localSessionId) {
-                endUserSession(localSessionId);
-            }
-             // Only redirect if not on a public page
-            if (!['/', '/forgot-password'].includes(pathname)) {
-                router.push('/');
-            }
+          setUser(null);
+          setIsSessionExpired(true);
         }
+      } else {
+        setUser(null);
+        const localSessionId = localStorage.getItem('session_id');
+        // Only end session if one exists to avoid unnecessary writes
+        if (localSessionId) {
+          endUserSession(localSessionId);
+        }
+        // Only redirect if not on a public page
+        if (!['/', '/forgot-password'].includes(pathname)) {
+          router.push('/');
+        }
+      }
     });
     return () => unsubscribe();
   }, [pathname, router, startUserSession, isSessionValid, endUserSession]);
-
-   useEffect(() => {
-    if (!user) return;
-
-    const intervalId = setInterval(async () => {
-        const valid = await isSessionValid(user.uid);
-        if (!valid) {
-            setIsSessionExpired(true);
-            clearInterval(intervalId);
-        }
-    }, 5000); // Check every 5 seconds
-
-    return () => clearInterval(intervalId);
-  }, [user, isSessionValid]);
 
 
   const handleLogoutClick = () => {
