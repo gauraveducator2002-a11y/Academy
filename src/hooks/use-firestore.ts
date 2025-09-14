@@ -31,25 +31,23 @@ const parseFirestoreData = (data: any): any => {
 };
 
 const serializeForFirestore = (data: any): any => {
-    if (data === undefined) {
-      // Firestore does not support `undefined`, so we convert it to `null`.
-      return null;
-    }
-    if (data === null) {
-      return null;
-    }
     if (data instanceof Date) {
       return Timestamp.fromDate(data);
     }
     if (Array.isArray(data)) {
       return data.map(serializeForFirestore);
     }
+    if (data === null) {
+        return null;
+    }
     if (typeof data === 'object' && data.constructor === Object) {
       const newData: { [key:string]: any } = {};
       for (const key in data) {
-        // We ensure we don't process undefined properties.
-        if (Object.prototype.hasOwnProperty.call(data, key) && data[key] !== undefined) {
-          newData[key] = serializeForFirestore(data[key]);
+        if (Object.prototype.hasOwnProperty.call(data, key)) {
+          const value = data[key];
+          if (value !== undefined) {
+             newData[key] = serializeForFirestore(value);
+          }
         }
       }
       return newData;
@@ -213,3 +211,4 @@ export const useTheme = (defaultValue: 'light' | 'dark', key: string) => {
   
     return [value, setValue] as const;
 };
+
