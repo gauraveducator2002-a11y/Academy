@@ -116,10 +116,10 @@ export default function AdminPageClient() {
     .filter(activity => new Date(activity.timestamp) >= tenHoursAgo);
   
   const subjectsForClass = (classId: string) => {
-    if (['11', '12'].includes(classId)) {
-      return subjects.filter(s => ['accountancy', 'business-studies', 'mathematics'].includes(s.id));
-    }
-    return subjects.filter(s => ['mathematics', 'science', 'social-science'].includes(s.id));
+    const isCommerceStream = ['11', '12'].includes(classId);
+    return isCommerceStream
+      ? subjects.filter(s => ['accountancy', 'business-studies', 'mathematics'].includes(s.id))
+      : subjects.filter(s => ['mathematics', 'science', 'social-science'].includes(s.id));
   };
 
   return (
