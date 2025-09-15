@@ -172,10 +172,17 @@ function AppContent({ children }: { children: React.ReactNode }) {
     }
   }, [user, remoteSession, hasMounted]);
   
+  const isAdmin = user?.email === 'gauraveducator2002@gmail.com';
+
+  const handleAdminLogout = useCallback(() => {
+    router.push('/');
+    endUserSession().then(() => {
+        signOut(auth).catch(error => console.error("Admin sign out failed:", error));
+    });
+  }, [endUserSession, router]);
 
   const handleLogoutClick = () => {
-    const isAdmin = user?.email === 'gauraveducator2002@gmail.com';
-    if(isAdmin) {
+    if (isAdmin) {
       handleAdminLogout();
     } else {
       setIsLogoutFeedbackOpen(true);
@@ -237,16 +244,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   };
   
   const isAuthPage = ['/', '/forgot-password'].includes(pathname);
-  const isAdmin = user?.email === 'gauraveducator2002@gmail.com';
-
-  const handleAdminLogout = useCallback(() => {
-    router.push('/');
-    endUserSession().then(() => {
-        signOut(auth).catch(error => console.error("Admin sign out failed:", error));
-    });
-  }, [endUserSession, router]);
-
-
+  
   if (isAuthPage) {
     return <>{children}</>;
   }
