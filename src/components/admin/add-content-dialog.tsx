@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -74,63 +75,6 @@ const fileToBase64 = (file: File): Promise<string> => {
     reader.onload = () => resolve(reader.result as string);
     reader.onerror = (error) => reject(error);
   });
-};
-
-const contentSpecificFields = {
-  note: (
-    <FormField
-      name="file"
-      render={({ field, form }) => (
-        <FormItem>
-          <FormLabel>PDF File</FormLabel>
-          <FormControl>
-            <Input 
-                type="file" 
-                accept=".pdf"
-                onChange={(e) => field.onChange(e.target.files)} 
-            />
-          </FormControl>
-          <FormMessage />
-        </FormItem>
-      )}
-    />
-  ),
-  test: (
-    <div className="space-y-4">
-      <FormField
-        name="testFile"
-        render={({ field, form }) => (
-          <FormItem>
-              <FormLabel>Test Paper File (PDF)</FormLabel>
-              <FormControl>
-              <Input 
-                  type="file" 
-                  accept=".pdf"
-                  onChange={(e) => field.onChange(e.target.files)} 
-              />
-              </FormControl>
-              <FormMessage />
-          </FormItem>
-        )}
-      />
-      <FormField
-        name="answerFile"
-        render={({ field, form }) => (
-          <FormItem>
-            <FormLabel>Answer Key File (PDF)</FormLabel>
-            <FormControl>
-            <Input 
-                type="file" 
-                accept=".pdf"
-                onChange={(e) => field.onChange(e.target.files)} 
-            />
-            </FormControl>
-            <FormMessage />
-          </FormItem>
-        )}
-      />
-    </div>
-  ),
 };
 
 const icon = {
@@ -246,7 +190,7 @@ export function AddContentDialog({ contentType, onContentAdded }: { contentType:
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a subject" />
-                      </Trigger>
+                      </SelectTrigger>
                     </FormControl>
                     <SelectContent>
                       {subjects.map((s) => (
@@ -287,7 +231,64 @@ export function AddContentDialog({ contentType, onContentAdded }: { contentType:
               )}
             />
              
-            {React.cloneElement(contentSpecificFields[contentType], { control: form.control })}
+            {contentType === 'note' && (
+              <FormField
+                control={form.control}
+                name="file"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>PDF File</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => field.onChange(e.target.files)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {contentType === 'test' && (
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="testFile"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Test Paper File (PDF)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="file"
+                          accept=".pdf"
+                          onChange={(e) => field.onChange(e.target.files)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="answerFile"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Answer Key File (PDF)</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="file"
+                          accept=".pdf"
+                          onChange={(e) => field.onChange(e.target.files)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             <FormField
               control={form.control}
