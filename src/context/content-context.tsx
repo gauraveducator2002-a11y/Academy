@@ -123,7 +123,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const { data: notes, addItem: addNote, deleteItem: deleteNote } = useFirestoreCollection('notes', NotesCollectionSchema);
   const { data: quizzes, addItem: addQuiz, deleteItem: deleteQuiz } = useFirestoreCollection('quizzes', QuizzesCollectionSchema);
   const { data: tests, addItem: addTest, deleteItem: deleteTest } = useFirestoreCollection('tests', TestsCollectionSchema);
-  const { data: recentActivity, addItem: addActivity } = useFirestoreCollection('recentActivity', ActivitiesCollectionSchema);
+  const { data: recentActivity, addItem: addActivityFirestore } = useFirestoreCollection('recentActivity', ActivitiesCollectionSchema);
   const { data: transactions, addItem: addTransaction } = useFirestoreCollection('transactions', TransactionsCollectionSchema);
   const { data: discountCodes, addItem: addDiscountCode, updateItem: updateDiscountCode, deleteItem: deleteDiscountCode } = useFirestoreCollection('discountCodes', DiscountCodesCollectionSchema);
   const { data: pricingData, updateData: updatePricingData } = useFirestoreDocument('pricing', 'default', PricingSchema);
@@ -147,6 +147,10 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     }, {} as ContentData);
     setContentData(newContentData);
   }, [notes, quizzes, tests]);
+  
+  const addActivityCallback = useCallback(async (activity: Omit<Activity, 'id'>) => {
+    return addActivityFirestore(activity);
+  }, [addActivityFirestore]);
 
   const setPricingCallback = useCallback(async (newPricing: Pricing) => {
     await updatePricingData(newPricing);
@@ -222,7 +226,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
         const classInfo = classes.find(c => c.id === itemToDelete!.classId);
 
         if (subject && classInfo) {
-            await addActivity({
+            await addActivityCallback({
                 type: activityType,
                 title: itemToDelete.title,
                 subject: subject.name,
@@ -232,7 +236,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
             });
         }
     }
-  }, [deleteNote, deleteQuiz, deleteTest, addActivity, notes, quizzes, tests]);
+  }, [deleteNote, deleteQuiz, deleteTest, addActivityCallback, notes, quizzes, tests]);
   
   const handleAddQuizAttemptCallback = useCallback(async (attempt: Omit<QuizAttempt, 'id'>) => {
     const newAttempt = await addQuizAttempt(attempt) as QuizAttempt;
@@ -242,7 +246,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
         const subject = subjects.find(s => s.id === quiz.subjectId);
         const classInfo = classes.find(c => c.id === quiz.classId);
         if (subject && classInfo) {
-             await addActivity({
+             await addActivityCallback({
                 type: 'Completed Quiz',
                 title: quiz.title,
                 subject: subject.name,
@@ -253,7 +257,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
         }
     }
     return newAttempt;
-}, [addQuizAttempt, quizzes, addActivity]);
+}, [addQuizAttempt, quizzes, addActivityCallback]);
   
   const addFeedbackCallback = useCallback(async (feedbackData: Omit<Feedback, 'id' | 'timestamp'>) => {
     return addFeedbackFirestore({ ...feedbackData, timestamp: new Date() });
@@ -264,8 +268,9 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     addContent: addContentCallback,
     deleteContent: deleteContentCallback,
     recentActivity,
-    addActivity: useCallback((activity: Omit<Activity, 'id'>) => addActivity(activity), [addActivity]),
+    addActivity: addActivityCallback,
     transactions,
+
     addTransaction: useCallback((transaction: Omit<Transaction, 'id'>) => addTransaction(transaction), [addTransaction]),
     discountCodes,
     addDiscountCode: useCallback((code: Omit<DiscountCode, 'id'>) => addDiscountCode(code), [addDiscountCode]),
@@ -293,5 +298,3 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     </ContentContext.Provider>
   );
 };
-
-    
