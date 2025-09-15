@@ -114,6 +114,13 @@ export default function AdminPageClient() {
   
   const sortedActivities = [...recentActivity]
     .filter(activity => new Date(activity.timestamp) >= tenHoursAgo);
+  
+  const subjectsForClass = (classId: string) => {
+    if (['11', '12'].includes(classId)) {
+      return subjects.filter(s => ['accountancy', 'business-studies', 'mathematics'].includes(s.id));
+    }
+    return subjects.filter(s => !['accountancy', 'business-studies'].includes(s.id));
+  };
 
   return (
     <>
@@ -145,9 +152,15 @@ export default function AdminPageClient() {
                 </AccordionTrigger>
                 <AccordionContent className="px-4 pb-4">
                    <Accordion type="multiple" className="w-full">
-                    {subjects.map(subject => {
+                    {subjectsForClass(c.id).map(subject => {
                       const subjectContent = contentData[subject.id];
-                      const hasContent = subjectContent && (subjectContent.notes.length > 0 || subjectContent.quizzes.length > 0 || subjectContent.tests.length > 0);
+                      
+                      if (!subjectContent) return null;
+
+                      const notesForClass = subjectContent.notes.filter(n => n.classId === c.id);
+                      const quizzesForClass = subjectContent.quizzes.filter(q => q.classId === c.id);
+                      const testsForClass = subjectContent.tests.filter(t => t.classId === c.id);
+                      const hasContent = notesForClass.length > 0 || quizzesForClass.length > 0 || testsForClass.length > 0;
 
                       if (!hasContent) return null;
 
@@ -157,7 +170,7 @@ export default function AdminPageClient() {
                             {subjectIcons[subject.id]} {subject.name}
                           </AccordionTrigger>
                           <AccordionContent className="space-y-4 pt-2">
-                            {subjectContent.notes.length > 0 && (
+                            {notesForClass.length > 0 && (
                               <div>
                                 <h4 className="font-semibold text-sm mb-2">Notes</h4>
                                 <Table>
@@ -169,7 +182,7 @@ export default function AdminPageClient() {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {subjectContent.notes.map(note => (
+                                    {notesForClass.map(note => (
                                       <TableRow key={note.id}>
                                         <TableCell>{note.title}</TableCell>
                                         <TableCell>{note.description}</TableCell>
@@ -192,7 +205,7 @@ export default function AdminPageClient() {
                                 </Table>
                               </div>
                             )}
-                             {subjectContent.tests.length > 0 && (
+                             {testsForClass.length > 0 && (
                               <div className="mt-4">
                                 <h4 className="font-semibold text-sm mb-2">Subjective Tests</h4>
                                 <Table>
@@ -204,7 +217,7 @@ export default function AdminPageClient() {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {subjectContent.tests.map(test => (
+                                    {testsForClass.map(test => (
                                       <TableRow key={test.id}>
                                         <TableCell>{test.title}</TableCell>
                                         <TableCell>{test.description}</TableCell>
@@ -230,7 +243,7 @@ export default function AdminPageClient() {
                                 </Table>
                               </div>
                             )}
-                            {subjectContent.quizzes.length > 0 && (
+                            {quizzesForClass.length > 0 && (
                                <div>
                                 <h4 className="font-semibold text-sm mb-2 mt-4">Quizzes (MCQ)</h4>
                                 <Table>
@@ -243,7 +256,7 @@ export default function AdminPageClient() {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {subjectContent.quizzes.map(quiz => (
+                                    {quizzesForClass.map(quiz => (
                                       <TableRow key={quiz.id}>
                                         <TableCell>{quiz.title}</TableCell>
                                         <TableCell>{quiz.questions.length}</TableCell>

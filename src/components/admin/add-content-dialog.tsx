@@ -246,7 +246,7 @@ export function AddContentDialog({ contentType, onContentAdded }: { contentType:
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a subject" />
-                      </SelectTrigger>
+                      </Trigger>
                     </FormControl>
                     <SelectContent>
                       {subjects.map((s) => (
