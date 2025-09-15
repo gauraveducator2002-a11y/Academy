@@ -23,8 +23,15 @@ export const UserSessionSchema = z.object({ activeSessionId: z.string(), lastLog
 
 // Collection Schemas
 const NotesCollectionSchema = z.array(NoteSchema);
-const TestsCollectionSchema = z.array(TestSchema);
 const QuizzesCollectionSchema = z.array(QuizSchema);
+const TestsCollectionSchema = z.array(TestSchema);
+const ActivitiesCollectionSchema = z.array(ActivitySchema);
+const TransactionsCollectionSchema = z.array(TransactionSchema);
+const DiscountCodesCollectionSchema = z.array(DiscountCodeSchema);
+const QuizAttemptsCollectionSchema = z.array(QuizAttemptSchema);
+const StudentUsersCollectionSchema = z.array(StudentUserSchema);
+const FeedbackCollectionSchema = z.array(FeedbackSchema);
+const NotificationsCollectionSchema = z.array(NotificationSchema);
 
 // Types
 export type Note = z.infer<typeof NoteSchema>;
@@ -116,14 +123,14 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const { data: notes, addItem: addNote, deleteItem: deleteNote } = useFirestoreCollection('notes', NotesCollectionSchema);
   const { data: quizzes, addItem: addQuiz, deleteItem: deleteQuiz } = useFirestoreCollection('quizzes', QuizzesCollectionSchema);
   const { data: tests, addItem: addTest, deleteItem: deleteTest } = useFirestoreCollection('tests', TestsCollectionSchema);
-  const { data: recentActivity, addItem: addActivity } = useFirestoreCollection('recentActivity', z.array(ActivitySchema));
-  const { data: transactions, addItem: addTransaction } = useFirestoreCollection('transactions', z.array(TransactionSchema));
-  const { data: discountCodes, addItem: addDiscountCode, updateItem: updateDiscountCode, deleteItem: deleteDiscountCode } = useFirestoreCollection('discountCodes', z.array(DiscountCodeSchema));
+  const { data: recentActivity, addItem: addActivity } = useFirestoreCollection('recentActivity', ActivitiesCollectionSchema);
+  const { data: transactions, addItem: addTransaction } = useFirestoreCollection('transactions', TransactionsCollectionSchema);
+  const { data: discountCodes, addItem: addDiscountCode, updateItem: updateDiscountCode, deleteItem: deleteDiscountCode } = useFirestoreCollection('discountCodes', DiscountCodesCollectionSchema);
   const { data: pricingData, updateData: updatePricingData } = useFirestoreDocument('pricing', 'default', PricingSchema);
-  const { data: quizAttempts, addItem: addQuizAttempt } = useFirestoreCollection('quizAttempts', z.array(QuizAttemptSchema));
-  const { data: studentUsers, addItem: addStudentUser } = useFirestoreCollection('studentUsers', z.array(StudentUserSchema));
-  const { data: feedback, addItem: addFeedbackFirestore } = useFirestoreCollection('feedback', z.array(FeedbackSchema));
-  const { data: notifications, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', z.array(NotificationSchema));
+  const { data: quizAttempts, addItem: addQuizAttempt } = useFirestoreCollection('quizAttempts', QuizAttemptsCollectionSchema);
+  const { data: studentUsers, addItem: addStudentUser } = useFirestoreCollection('studentUsers', StudentUsersCollectionSchema);
+  const { data: feedback, addItem: addFeedbackFirestore } = useFirestoreCollection('feedback', FeedbackCollectionSchema);
+  const { data: notifications, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', NotificationsCollectionSchema);
   const [theme, setTheme] = useTheme('light', 'theme');
   const [contentData, setContentData] = useState<ContentData>(initialContentData);
   
@@ -196,14 +203,17 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
         case 'note': 
             itemToDelete = notes.find(n => n.id === id);
             activityType = 'Deleted Note';
+            await deleteNote(id);
             break;
         case 'quiz':
             itemToDelete = quizzes.find(q => q.id === id);
             activityType = 'Deleted Quiz';
+            await deleteQuiz(id);
             break;
         case 'test':
             itemToDelete = tests.find(t => t.id === id);
             activityType = 'Deleted Test';
+            await deleteTest(id);
             break;
     }
 
@@ -221,12 +231,6 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
                 fileUrl: null,
             });
         }
-    }
-
-    switch (type) {
-        case 'note': await deleteNote(id); break;
-        case 'quiz': await deleteQuiz(id); break;
-        case 'test': await deleteTest(id); break;
     }
   }, [deleteNote, deleteQuiz, deleteTest, addActivity, notes, quizzes, tests]);
   

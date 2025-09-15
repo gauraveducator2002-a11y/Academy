@@ -23,7 +23,9 @@ const parseFirestoreData = (data: any): any => {
   if (typeof data === 'object' && !Array.isArray(data) && data !== null) {
     const newData: { [key: string]: any } = {};
     for (const key in data) {
-      newData[key] = parseFirestoreData(data[key]);
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+        newData[key] = parseFirestoreData(data[key]);
+      }
     }
     return newData;
   }
@@ -80,7 +82,6 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
           setData(validatedData);
         } catch (error) {
           console.error(`Zod validation failed for ${collectionName}:`, error);
-          // Do not clear data on validation error to prevent UI flickers
         } finally {
           setLoading(false);
         }
@@ -94,7 +95,7 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
     return () => unsubscribe();
   }, [collectionName, schema]);
 
-  const addItem = useCallback(async (item: Omit<ItemType, 'id'>): Promise<ItemType> => {
+  const addItem = useCallback(async (item: Omit<ItemType, 'id'>) => {
     const collectionRef = collection(db, collectionName);
     const serializedItem = serializeForFirestore(item);
     const docRef = await addDoc(collectionRef, serializedItem);
