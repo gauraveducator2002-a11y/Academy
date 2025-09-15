@@ -270,7 +270,6 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     recentActivity,
     addActivity: addActivityCallback,
     transactions,
-
     addTransaction: useCallback((transaction: Omit<Transaction, 'id'>) => addTransaction(transaction), [addTransaction]),
     discountCodes,
     addDiscountCode: useCallback((code: Omit<DiscountCode, 'id'>) => addDiscountCode(code), [addDiscountCode]),
@@ -298,3 +297,5 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     </ContentContext.Provider>
   );
 };
+
+    
