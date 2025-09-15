@@ -18,7 +18,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { FileText, ClipboardList, Award, ExternalLink, Book, Atom, Landmark, Trash2, Pencil, BrainCircuit, History, Users, RefreshCw, Clipboard, MessagesSquare, FileMinus } from 'lucide-react';
+import { FileText, ClipboardList, Award, ExternalLink, Book, Atom, Landmark, Trash2, Pencil, BrainCircuit, History, Users, RefreshCw, Clipboard, MessagesSquare, FileMinus, Calculator, Briefcase } from 'lucide-react';
 import { classes, subjects } from '@/lib/data';
 import { ContentContext } from '@/context/content-context';
 import { formatDistanceToNow } from 'date-fns';
@@ -52,6 +52,8 @@ const subjectIcons: { [key: string]: React.ReactNode } = {
   mathematics: <Book className="h-6 w-6 text-primary" />,
   science: <Atom className="h-6 w-6 text-primary" />,
   'social-science': <Landmark className="h-6 w-6 text-primary" />,
+  accountancy: <Calculator className="h-6 w-6 text-primary" />,
+  'business-studies': <Briefcase className="h-6 w-6 text-primary" />,
 };
 
 
