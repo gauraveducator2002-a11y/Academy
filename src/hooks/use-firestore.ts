@@ -95,7 +95,7 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
     return () => unsubscribe();
   }, [collectionName, schema]);
 
-  const addItem = useCallback(async (item: Omit<ItemType, 'id'>) => {
+  const addItem = useCallback(async (item: Omit<ItemType, 'id'>): Promise<ItemType> => {
     const collectionRef = collection(db, collectionName);
     const serializedItem = serializeForFirestore(item);
     const docRef = await addDoc(collectionRef, serializedItem);
