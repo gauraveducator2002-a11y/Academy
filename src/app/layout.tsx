@@ -1,3 +1,4 @@
+
 'use client';
 
 import './globals.css';
@@ -16,6 +17,7 @@ import {
   Settings,
   Bell,
   BellDot,
+  History,
 } from 'lucide-react';
 import { getAuth, sendPasswordResetEmail, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase';
@@ -136,8 +138,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const endUserSession = useCallback(async () => {
     if (typeof window === 'undefined') return;
     localStorage.removeItem('session_id');
-    await deleteRemoteSession();
-  }, [deleteRemoteSession]);
+    if (userId) {
+        await deleteRemoteSession();
+    }
+  }, [deleteRemoteSession, userId]);
 
  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -175,10 +179,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const isAdmin = user?.email === 'gauraveducator2002@gmail.com';
 
   const handleAdminLogout = useCallback(() => {
-    router.push('/');
     endUserSession().then(() => {
         signOut(auth).catch(error => console.error("Admin sign out failed:", error));
     });
+    router.push('/');
   }, [endUserSession, router]);
 
   const handleLogoutClick = () => {
@@ -190,7 +194,6 @@ function AppContent({ children }: { children: React.ReactNode }) {
   };
 
   const handleFinalLogout = useCallback(() => {
-    router.push('/');
     setIsLogoutFeedbackOpen(false);
     endUserSession().then(() => {
         signOut(auth).catch(error => console.error("Sign out failed:", error));
@@ -198,6 +201,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         console.error("endUserSession failed:", error);
         signOut(auth).catch(error => console.error("Sign out failed on error path:", error));
     });
+    router.push('/');
   }, [endUserSession, router]);
 
 
@@ -275,18 +279,32 @@ function AppContent({ children }: { children: React.ReactNode }) {
               </SidebarMenuButton>
             </SidebarMenuItem>
             {!isAdmin && (
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname.startsWith('/feedback')}
-                  tooltip="Community Feedback"
-                >
-                  <Link href="/feedback">
-                    <MessagesSquare />
-                    <span>Community Feedback</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              <>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith('/quiz-history')}
+                    tooltip="Quiz History"
+                  >
+                    <Link href="/quiz-history">
+                      <History />
+                      <span>Quiz History</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname.startsWith('/feedback')}
+                    tooltip="Community Feedback"
+                  >
+                    <Link href="/feedback">
+                      <MessagesSquare />
+                      <span>Community Feedback</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </>
             )}
               <SidebarMenuItem>
               <SidebarMenuButton
