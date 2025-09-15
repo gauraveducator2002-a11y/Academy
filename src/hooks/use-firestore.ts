@@ -80,6 +80,7 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
           setData(validatedData);
         } catch (error) {
           console.error(`Zod validation failed for ${collectionName}:`, error);
+          // Do not clear data on validation error to prevent UI flickers
         } finally {
           setLoading(false);
         }
@@ -93,12 +94,12 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
     return () => unsubscribe();
   }, [collectionName, schema]);
 
-  const addItem = async (item: Omit<ItemType, 'id'>): Promise<ItemType> => {
+  const addItem = useCallback(async (item: Omit<ItemType, 'id'>): Promise<ItemType> => {
     const collectionRef = collection(db, collectionName);
     const serializedItem = serializeForFirestore(item);
     const docRef = await addDoc(collectionRef, serializedItem);
     return { id: docRef.id, ...item } as ItemType;
-  };
+  }, [collectionName]);
 
   const updateItem = useCallback(async (id: string, item: Partial<Omit<ItemType, 'id'>>) => {
     if (!id) return;
