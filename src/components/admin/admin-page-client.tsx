@@ -119,7 +119,7 @@ export default function AdminPageClient() {
     if (['11', '12'].includes(classId)) {
       return subjects.filter(s => ['accountancy', 'business-studies', 'mathematics'].includes(s.id));
     }
-    return subjects.filter(s => !['accountancy', 'business-studies'].includes(s.id));
+    return subjects.filter(s => ['mathematics', 'science', 'social-science'].includes(s.id));
   };
 
   return (

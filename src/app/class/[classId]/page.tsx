@@ -26,7 +26,7 @@ export default function ClassPage() {
   const subjectsForClass =
     ['11', '12'].includes(classId)
       ? subjects.filter(s => ['accountancy', 'business-studies', 'mathematics'].includes(s.id))
-      : subjects.filter(s => !['accountancy', 'business-studies'].includes(s.id));
+      : subjects.filter(s => ['mathematics', 'science', 'social-science'].includes(s.id));
 
   return (
     <>
