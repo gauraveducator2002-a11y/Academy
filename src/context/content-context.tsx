@@ -125,21 +125,25 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const { data: feedback, addItem: addFeedbackFirestore } = useFirestoreCollection('feedback', z.array(FeedbackSchema));
   const { data: notifications, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', z.array(NotificationSchema));
   const [theme, setTheme] = useTheme('light', 'theme');
+  const [contentData, setContentData] = useState<ContentData>(initialContentData);
   
   const pricing = pricingData ?? initialPricing;
+
+  useEffect(() => {
+    const newContentData = subjects.reduce((acc, subject) => {
+        acc[subject.id] = {
+            notes: notes.filter(n => n.subjectId === subject.id),
+            quizzes: quizzes.filter(q => q.subjectId === subject.id),
+            tests: tests.filter(t => t.subjectId === subject.id),
+        };
+        return acc;
+    }, {} as ContentData);
+    setContentData(newContentData);
+  }, [notes, quizzes, tests]);
 
   const setPricingCallback = useCallback(async (newPricing: Pricing) => {
     await updatePricingData(newPricing);
   },[updatePricingData]);
-
-  const contentData: ContentData = subjects.reduce((acc, subject) => {
-    acc[subject.id] = {
-      notes: notes.filter(n => n.subjectId === subject.id),
-      quizzes: quizzes.filter(q => q.subjectId === subject.id),
-      tests: tests.filter(t => t.subjectId === subject.id),
-    };
-    return acc;
-  }, {} as ContentData);
   
   const addNotificationCallback = useCallback(async (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
     return await addNotificationFirestore({
