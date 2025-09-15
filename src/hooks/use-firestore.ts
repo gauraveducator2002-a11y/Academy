@@ -39,8 +39,8 @@ const serializeForFirestore = (data: any): any => {
     if (Array.isArray(data)) {
       return data.map(serializeForFirestore);
     }
-    if (data === null) {
-        return null;
+    if (data === null || data === undefined) {
+        return data;
     }
     if (typeof data === 'object' && data.constructor === Object) {
       const newData: { [key:string]: any } = {};
@@ -95,12 +95,12 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
     return () => unsubscribe();
   }, [collectionName, schema]);
 
-  const addItem = useCallback(async (item: Omit<ItemType, 'id'>): Promise<ItemType> => {
+  const addItem = async (item: Omit<ItemType, 'id'>): Promise<ItemType> => {
     const collectionRef = collection(db, collectionName);
     const serializedItem = serializeForFirestore(item);
     const docRef = await addDoc(collectionRef, serializedItem);
     return { id: docRef.id, ...item } as ItemType;
-  }, [collectionName]);
+  };
 
   const updateItem = useCallback(async (id: string, item: Partial<Omit<ItemType, 'id'>>) => {
     if (!id) return;
