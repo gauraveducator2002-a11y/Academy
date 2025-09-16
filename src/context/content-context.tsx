@@ -184,59 +184,21 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const addContentCallback = useCallback(async (type: 'note' | 'quiz' | 'test', data: any) => {
     let result;
     
-    const dataToSave = { ...data, id: 'temp-id' };
-    
-    // Optimistically update local state
-    setContentData(prevData => {
-      const newContentData = { ...prevData };
-      const subjectContent = newContentData[data.subjectId] ?? { notes: [], quizzes: [], tests: [] };
-      
-      switch (type) {
-        case 'note':
-          subjectContent.notes = [...subjectContent.notes, dataToSave as Note];
-          break;
-        case 'quiz':
-          subjectContent.quizzes = [...subjectContent.quizzes, dataToSave as Quiz];
-          break;
-        case 'test':
-          subjectContent.tests = [...subjectContent.tests, dataToSave as Test];
-          break;
-      }
-      
-      newContentData[data.subjectId] = subjectContent;
-      return newContentData;
-    });
+    // This function now correctly receives the complete data object from the form
+    const dataToSave = { ...data };
 
     try {
       switch (type) {
-        case 'note': result = await addNote(data); break;
-        case 'quiz': result = await addQuiz(data); break;
-        case 'test': result = await addTest(data); break;
+        case 'note': result = await addNote(dataToSave); break;
+        case 'quiz': result = await addQuiz(dataToSave); break;
+        case 'test': result = await addTest(dataToSave); break;
         default: throw new Error('Invalid content type');
       }
     } catch (error) {
-      // Revert optimistic update on error
-      setContentData(prevData => {
-        const revertedContentData = { ...prevData };
-        const subjectContent = revertedContentData[data.subjectId];
-        if (subjectContent) {
-          switch (type) {
-            case 'note':
-              subjectContent.notes = subjectContent.notes.filter(n => n.id !== 'temp-id');
-              break;
-            case 'quiz':
-              subjectContent.quizzes = subjectContent.quizzes.filter(q => q.id !== 'temp-id');
-              break;
-            case 'test':
-              subjectContent.tests = subjectContent.tests.filter(t => t.id !== 'temp-id');
-              break;
-          }
-        }
-        return revertedContentData;
-      });
-      throw error; // Re-throw the error to be caught by the caller
+      console.error(`Failed to add ${type}:`, error);
+      // Re-throw the error to be caught by the caller
+      throw error; 
     }
->>>>>>>
     
     const subject = subjects.find(s => s.id === data.subjectId);
     const classInfo = classes.find(c => c.id === data.classId);
@@ -252,6 +214,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
 
     return result;
   }, [addNote, addQuiz, addTest, addNotificationCallback]);
+
 
   const deleteContentCallback = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', id: string) => {
     let itemToDelete;
