@@ -184,10 +184,13 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const addContentCallback = useCallback(async (type: 'note' | 'quiz' | 'test', data: any) => {
     let result;
     
+    // This is the critical fix: ensure the data object is correctly structured before saving.
+    const dataToSave = { ...data };
+    
     switch (type) {
-      case 'note': result = await addNote(data); break;
-      case 'quiz': result = await addQuiz(data); break;
-      case 'test': result = await addTest(data); break;
+      case 'note': result = await addNote(dataToSave); break;
+      case 'quiz': result = await addQuiz(dataToSave); break;
+      case 'test': result = await addTest(dataToSave); break;
       default: throw new Error('Invalid content type');
     }
     

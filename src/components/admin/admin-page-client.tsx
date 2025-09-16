@@ -64,7 +64,7 @@ export default function AdminPageClient() {
   const handleContentAdded = async (type: 'note' | 'quiz' | 'test', content: any) => {
     try {
       const addedContent = await addContent(type, content);
-
+  
       const classInfo = classes.find((c) => c.id === addedContent.classId);
       const subjectInfo = subjects.find((s) => s.id === addedContent.subjectId);
     
