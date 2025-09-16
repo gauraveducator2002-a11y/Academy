@@ -109,11 +109,7 @@ export default function AdminPageClient() {
     setItemToDelete({ subjectId, type, item });
   };
   
-  const tenHoursAgo = new Date();
-  tenHoursAgo.setHours(tenHoursAgo.getHours() - 10);
-  
-  const sortedActivities = [...recentActivity]
-    .filter(activity => new Date(activity.timestamp) >= tenHoursAgo);
+  const sortedActivities = [...recentActivity];
   
   const subjectsForClass = (classId: string) => {
     const isCommerceStream = ['11', '12'].includes(classId);
@@ -290,7 +286,7 @@ export default function AdminPageClient() {
         
         <div>
           <h2 className="text-xl font-semibold tracking-tight">Recent Activity</h2>
-          <p className="text-sm text-muted-foreground">A log of recent activities from the last 10 hours.</p>
+          <p className="text-sm text-muted-foreground">A log of recent activities.</p>
           <div className="mt-4 rounded-lg border">
             <Table>
               <TableHeader>
@@ -335,7 +331,7 @@ export default function AdminPageClient() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground">
-                      No recent activity in the last 10 hours.
+                      No recent activity.
                     </TableCell>
                   </TableRow>
                 )}

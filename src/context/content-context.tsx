@@ -124,11 +124,11 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const { data: quizzes, addItem: addQuiz, deleteItem: deleteQuiz } = useFirestoreCollection('quizzes', QuizzesCollectionSchema);
   const { data: tests, addItem: addTest, deleteItem: deleteTest } = useFirestoreCollection('tests', TestsCollectionSchema);
   const { data: recentActivity, addItem: addActivityFirestore } = useFirestoreCollection('recentActivity', ActivitiesCollectionSchema);
-  const { data: transactions, addItem: addTransaction } = useFirestoreCollection('transactions', TransactionsCollectionSchema);
-  const { data: discountCodes, addItem: addDiscountCode, updateItem: updateDiscountCode, deleteItem: deleteDiscountCode } = useFirestoreCollection('discountCodes', DiscountCodesCollectionSchema);
+  const { data: transactions, addItem: addTransactionFirestore } = useFirestoreCollection('transactions', TransactionsCollectionSchema);
+  const { data: discountCodes, addItem: addDiscountCodeFirestore, updateItem: updateDiscountCode, deleteItem: deleteDiscountCode } = useFirestoreCollection('discountCodes', DiscountCodesCollectionSchema);
   const { data: pricingData, updateData: updatePricingData } = useFirestoreDocument('pricing', 'default', PricingSchema);
-  const { data: quizAttempts, addItem: addQuizAttempt } = useFirestoreCollection('quizAttempts', QuizAttemptsCollectionSchema);
-  const { data: studentUsers, addItem: addStudentUser } = useFirestoreCollection('studentUsers', StudentUsersCollectionSchema);
+  const { data: quizAttempts, addItem: addQuizAttemptFirestore } = useFirestoreCollection('quizAttempts', QuizAttemptsCollectionSchema);
+  const { data: studentUsers, addItem: addStudentUserFirestore } = useFirestoreCollection('studentUsers', StudentUsersCollectionSchema);
   const { data: feedback, addItem: addFeedbackFirestore } = useFirestoreCollection('feedback', FeedbackCollectionSchema);
   const { data: notifications, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', NotificationsCollectionSchema);
   const [theme, setTheme] = useTheme('light', 'theme');
@@ -151,6 +151,14 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const addActivityCallback = useCallback(async (activity: Omit<Activity, 'id'>) => {
     return addActivityFirestore(activity);
   }, [addActivityFirestore]);
+
+  const addTransactionCallback = useCallback(async (transaction: Omit<Transaction, 'id'>) => {
+    return addTransactionFirestore(transaction);
+  }, [addTransactionFirestore]);
+
+  const addDiscountCodeCallback = useCallback(async (code: Omit<DiscountCode, 'id'>) => {
+    return addDiscountCodeFirestore(code);
+  }, [addDiscountCodeFirestore]);
 
   const setPricingCallback = useCallback(async (newPricing: Pricing) => {
     await updatePricingData(newPricing);
@@ -239,7 +247,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   }, [deleteNote, deleteQuiz, deleteTest, addActivityCallback, notes, quizzes, tests]);
   
   const handleAddQuizAttemptCallback = useCallback(async (attempt: Omit<QuizAttempt, 'id'>) => {
-    const newAttempt = await addQuizAttempt(attempt) as QuizAttempt;
+    const newAttempt = await addQuizAttemptFirestore(attempt) as QuizAttempt;
     const quiz = quizzes.find(q => q.id === attempt.quizId);
 
     if (quiz) {
@@ -257,11 +265,16 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
         }
     }
     return newAttempt;
-}, [addQuizAttempt, quizzes, addActivityCallback]);
+}, [addQuizAttemptFirestore, quizzes, addActivityCallback]);
   
   const addFeedbackCallback = useCallback(async (feedbackData: Omit<Feedback, 'id' | 'timestamp'>) => {
     return addFeedbackFirestore({ ...feedbackData, timestamp: new Date() });
   }, [addFeedbackFirestore]);
+
+  const addStudentUserCallback = useCallback(async (user: Omit<StudentUser, 'id'>) => {
+    return addStudentUserFirestore(user);
+  }, [addStudentUserFirestore]);
+
 
   const value = {
     contentData,
@@ -270,9 +283,9 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     recentActivity,
     addActivity: addActivityCallback,
     transactions,
-    addTransaction: useCallback((transaction: Omit<Transaction, 'id'>) => addTransaction(transaction), [addTransaction]),
+    addTransaction: addTransactionCallback,
     discountCodes,
-    addDiscountCode: useCallback((code: Omit<DiscountCode, 'id'>) => addDiscountCode(code), [addDiscountCode]),
+    addDiscountCode: addDiscountCodeCallback,
     updateDiscountCode: useCallback((code: DiscountCode) => updateDiscountCode(code.id, code), [updateDiscountCode]),
     deleteDiscountCode: useCallback((id: string) => deleteDiscountCode(id), [deleteDiscountCode]),
     pricing,
@@ -280,7 +293,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     quizAttempts,
     addQuizAttempt: handleAddQuizAttemptCallback,
     studentUsers,
-    addStudentUser: useCallback((user: Omit<StudentUser, 'id'>) => addStudentUser(user), [addStudentUser]),
+    addStudentUser: addStudentUserCallback,
     feedback,
     addFeedback: addFeedbackCallback,
     theme,
