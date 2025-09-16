@@ -181,7 +181,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     await Promise.all(unreadNotifications.map(n => updateNotification(n.id, { read: true })));
   }, [notifications, updateNotification]);
 
-  const addContentCallback = useCallback(async (type: 'note' | 'quiz' | 'test', data: any) => {
+  const addContentCallback = async (type: 'note' | 'quiz' | 'test', data: any) => {
     let result;
     
     // This is the corrected logic. The `data` object from the form already contains all necessary fields.
@@ -212,7 +212,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     }
 
     return result;
-  }, [addNote, addQuiz, addTest, addNotificationCallback]);
+  };
 
 
   const deleteContentCallback = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', id: string) => {
