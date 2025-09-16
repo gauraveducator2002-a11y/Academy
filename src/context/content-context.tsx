@@ -184,8 +184,8 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const addContentCallback = useCallback(async (type: 'note' | 'quiz' | 'test', data: any) => {
     let result;
     
-    // This function now correctly receives the complete data object from the form
-    const dataToSave = { ...data };
+    // This is the corrected logic. The `data` object from the form already contains all necessary fields.
+    const dataToSave = data;
 
     try {
       switch (type) {
@@ -196,7 +196,6 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error(`Failed to add ${type}:`, error);
-      // Re-throw the error to be caught by the caller
       throw error; 
     }
     
