@@ -75,7 +75,7 @@ type ContentContextType = {
   theme: Theme;
   notifications: Notification[];
   setTheme: (theme: Theme) => void;
-  addContent: (subjectId: string, type: 'note' | 'quiz' | 'test', data: any) => Promise<any>;
+  addContent: (type: 'note' | 'quiz' | 'test', data: any) => Promise<any>;
   deleteContent: (subjectId: string, type: 'note' | 'quiz' | 'test', id: string) => Promise<void>;
   addActivity: (activity: Omit<Activity, 'id'>) => Promise<any>;
   addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<any>;
@@ -181,18 +181,17 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     await Promise.all(unreadNotifications.map(n => updateNotification(n.id, { read: true })));
   }, [notifications, updateNotification]);
 
-  const addContentCallback = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', data: any) => {
+  const addContentCallback = useCallback(async (type: 'note' | 'quiz' | 'test', data: any) => {
     let result;
-    const commonData = { ...data, subjectId };
     
     switch (type) {
-      case 'note': result = await addNote(commonData); break;
-      case 'quiz': result = await addQuiz(commonData); break;
-      case 'test': result = await addTest(commonData); break;
+      case 'note': result = await addNote(data); break;
+      case 'quiz': result = await addQuiz(data); break;
+      case 'test': result = await addTest(data); break;
       default: throw new Error('Invalid content type');
     }
     
-    const subject = subjects.find(s => s.id === subjectId);
+    const subject = subjects.find(s => s.id === data.subjectId);
     const classInfo = classes.find(c => c.id === data.classId);
     
     if(subject && classInfo) {
@@ -200,7 +199,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
           title: `New ${type} added!`,
           message: `A new ${type} "${data.title}" has been added to ${subject.name} for ${classInfo.name}.`,
           classId: data.classId,
-          subjectId: subjectId,
+          subjectId: data.subjectId,
       });
     }
 
