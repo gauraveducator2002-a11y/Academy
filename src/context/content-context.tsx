@@ -184,15 +184,59 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const addContentCallback = useCallback(async (type: 'note' | 'quiz' | 'test', data: any) => {
     let result;
     
-    // This is the critical fix: ensure the data object is correctly structured before saving.
-    const dataToSave = { ...data };
+    const dataToSave = { ...data, id: 'temp-id' };
     
-    switch (type) {
-      case 'note': result = await addNote(dataToSave); break;
-      case 'quiz': result = await addQuiz(dataToSave); break;
-      case 'test': result = await addTest(dataToSave); break;
-      default: throw new Error('Invalid content type');
+    // Optimistically update local state
+    setContentData(prevData => {
+      const newContentData = { ...prevData };
+      const subjectContent = newContentData[data.subjectId] ?? { notes: [], quizzes: [], tests: [] };
+      
+      switch (type) {
+        case 'note':
+          subjectContent.notes = [...subjectContent.notes, dataToSave as Note];
+          break;
+        case 'quiz':
+          subjectContent.quizzes = [...subjectContent.quizzes, dataToSave as Quiz];
+          break;
+        case 'test':
+          subjectContent.tests = [...subjectContent.tests, dataToSave as Test];
+          break;
+      }
+      
+      newContentData[data.subjectId] = subjectContent;
+      return newContentData;
+    });
+
+    try {
+      switch (type) {
+        case 'note': result = await addNote(data); break;
+        case 'quiz': result = await addQuiz(data); break;
+        case 'test': result = await addTest(data); break;
+        default: throw new Error('Invalid content type');
+      }
+    } catch (error) {
+      // Revert optimistic update on error
+      setContentData(prevData => {
+        const revertedContentData = { ...prevData };
+        const subjectContent = revertedContentData[data.subjectId];
+        if (subjectContent) {
+          switch (type) {
+            case 'note':
+              subjectContent.notes = subjectContent.notes.filter(n => n.id !== 'temp-id');
+              break;
+            case 'quiz':
+              subjectContent.quizzes = subjectContent.quizzes.filter(q => q.id !== 'temp-id');
+              break;
+            case 'test':
+              subjectContent.tests = subjectContent.tests.filter(t => t.id !== 'temp-id');
+              break;
+          }
+        }
+        return revertedContentData;
+      });
+      throw error; // Re-throw the error to be caught by the caller
     }
+>>>>>>>
     
     const subject = subjects.find(s => s.id === data.subjectId);
     const classInfo = classes.find(c => c.id === data.classId);
