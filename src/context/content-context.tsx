@@ -183,9 +183,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
 
   const addContentCallback = async (type: 'note' | 'quiz' | 'test', data: any) => {
     let result;
-    
-    // This is the corrected logic. The `data` object from the form already contains all necessary fields.
-    const dataToSave = data;
+    const dataToSave = data; 
 
     try {
       switch (type) {
@@ -213,7 +211,6 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
 
     return result;
   };
-
 
   const deleteContentCallback = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', id: string) => {
     let itemToDelete;
