@@ -101,12 +101,13 @@ export default function SubjectPage() {
   };
 
   const content = contentData[classId]?.[subjectId] || { notes: [], quizzes: [], tests: [] };
+  
   const subjectQuizAttempts = quizAttempts.filter(attempt => {
     const quiz = content.quizzes.find(q => q.id === attempt.quizId);
     return quiz?.subjectId === subjectId && quiz?.classId === classId;
   }).sort((a,b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-  if (!hasMounted || !content) {
+  if (!hasMounted) {
     return (
         <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight font-headline">
@@ -284,3 +285,5 @@ export default function SubjectPage() {
     </>
   );
 }
+
+    

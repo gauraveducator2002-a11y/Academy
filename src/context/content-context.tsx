@@ -144,19 +144,20 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     const newContentData = classes.reduce((classAcc, currentClass) => {
-      classAcc[currentClass.id] = subjects.reduce((subjectAcc, subject) => {
-        subjectAcc[subject.id] = {
-          notes: notes.filter(n => n.classId === currentClass.id && n.subjectId === subject.id),
-          quizzes: quizzes.filter(q => q.classId === currentClass.id && q.subjectId === subject.id),
-          tests: tests.filter(t => t.classId === currentClass.id && t.subjectId === subject.id),
-        };
-        return subjectAcc;
-      }, {} as ClassContent);
-      return classAcc;
+        const classContent: ClassContent = subjects.reduce((subjectAcc, subject) => {
+            subjectAcc[subject.id] = {
+                notes: notes.filter(n => n.classId === currentClass.id && n.subjectId === subject.id),
+                quizzes: quizzes.filter(q => q.classId === currentClass.id && q.subjectId === subject.id),
+                tests: tests.filter(t => t.classId === currentClass.id && t.subjectId === subject.id),
+            };
+            return subjectAcc;
+        }, {} as ClassContent);
+        classAcc[currentClass.id] = classContent;
+        return classAcc;
     }, {} as ContentData);
 
     setContentData(newContentData);
-  }, [notes, quizzes, tests]);
+}, [notes, quizzes, tests]);
   
   const addActivityCallback = useCallback(async (activity: Omit<Activity, 'id'>) => {
     return addActivityFirestore(activity);
@@ -193,18 +194,25 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
 
   const addContentCallback = async (type: 'note' | 'quiz' | 'test', data: any) => {
     let result;
-    const dataToSave = data; 
+    const dataToSave = { ...data };
 
     try {
-      switch (type) {
-        case 'note': result = await addNote(dataToSave); break;
-        case 'quiz': result = await addQuiz(dataToSave); break;
-        case 'test': result = await addTest(dataToSave); break;
-        default: throw new Error('Invalid content type');
-      }
+        switch (type) {
+            case 'note':
+                result = await addNote(dataToSave);
+                break;
+            case 'quiz':
+                result = await addQuiz(dataToSave);
+                break;
+            case 'test':
+                result = await addTest(dataToSave);
+                break;
+            default:
+                throw new Error('Invalid content type');
+        }
     } catch (error) {
-      console.error(`Failed to add ${type}:`, error);
-      throw error; 
+        console.error(`Failed to add ${type}:`, error);
+        throw error;
     }
     
     const subject = subjects.find(s => s.id === data.subjectId);
@@ -325,3 +333,6 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     </ContentContext.Provider>
   );
 };
+
+    
+    
