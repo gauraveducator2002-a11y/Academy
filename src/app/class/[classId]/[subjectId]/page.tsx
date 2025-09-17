@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useContext, useState, useEffect } from 'react';
@@ -99,7 +100,7 @@ export default function SubjectPage() {
     setSelectedContent(null);
   };
 
-  const content = contentData[subjectId as keyof typeof contentData] || { notes: [], quizzes: [], tests: [] };
+  const content = contentData[classId]?.[subjectId] || { notes: [], quizzes: [], tests: [] };
   const subjectQuizAttempts = quizAttempts.filter(attempt => {
     const quiz = content.quizzes.find(q => q.id === attempt.quizId);
     return quiz?.subjectId === subjectId && quiz?.classId === classId;

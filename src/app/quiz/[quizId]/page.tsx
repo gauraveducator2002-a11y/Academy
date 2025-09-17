@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useContext, useEffect, useState } from 'react';
@@ -10,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { ArrowLeft, ArrowRight, CheckCircle, Loader2, TimerIcon } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Quiz } from '@/context/content-context';
 
 export default function QuizPage() {
     const params = useParams();
@@ -25,8 +27,9 @@ export default function QuizPage() {
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     
-    const quiz = Object.values(contentData)
-        .flatMap(subject => subject.quizzes)
+    const quiz: Quiz | null | undefined = Object.values(contentData)
+        .flatMap(classContent => Object.values(classContent))
+        .flatMap(subjectContent => subjectContent.quizzes)
         .find(q => q.id === quizId);
 
     useEffect(() => {
@@ -51,7 +54,7 @@ export default function QuizPage() {
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [timeLeft]);
+    }, [timeLeft, handleSubmit]);
     
     if (!quiz) {
         // Allow some time for context to load
@@ -74,7 +77,7 @@ export default function QuizPage() {
         setSelectedAnswers(newAnswers);
     };
 
-    const handleSubmit = async (autoSubmit: boolean = false) => {
+    async function handleSubmit(autoSubmit: boolean = false) {
         if (isSubmitting) return;
         setIsSubmitting(true);
         

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useContext } from 'react';
@@ -9,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, XCircle, Home, Clock, Trophy } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
+import { Quiz } from '@/context/content-context';
 
 export default function ResultPage() {
     const params = useParams();
@@ -21,8 +23,9 @@ export default function ResultPage() {
         return notFound();
     }
     
-    const quiz = Object.values(contentData)
-        .flatMap(subject => subject.quizzes)
+    const quiz: Quiz | null | undefined = Object.values(contentData)
+        .flatMap(classContent => Object.values(classContent))
+        .flatMap(subjectContent => subjectContent.quizzes)
         .find(q => q.id === attempt.quizId);
 
     if (!quiz) {

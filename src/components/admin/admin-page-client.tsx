@@ -148,14 +148,12 @@ export default function AdminPageClient() {
                 <AccordionContent className="px-4 pb-4">
                    <Accordion type="multiple" className="w-full">
                     {subjectsForClass(c.id).map(subject => {
-                      const subjectContent = contentData[subject.id];
+                      const subjectContent = contentData[c.id]?.[subject.id];
                       
                       if (!subjectContent) return null;
 
-                      const notesForClass = subjectContent.notes.filter(n => n.classId === c.id);
-                      const quizzesForClass = subjectContent.quizzes.filter(q => q.classId === c.id);
-                      const testsForClass = subjectContent.tests.filter(t => t.classId === c.id);
-                      const hasContent = notesForClass.length > 0 || quizzesForClass.length > 0 || testsForClass.length > 0;
+                      const { notes, quizzes, tests } = subjectContent;
+                      const hasContent = notes.length > 0 || quizzes.length > 0 || tests.length > 0;
 
                       if (!hasContent) return null;
 
@@ -165,7 +163,7 @@ export default function AdminPageClient() {
                             {subjectIcons[subject.id]} {subject.name}
                           </AccordionTrigger>
                           <AccordionContent className="space-y-4 pt-2">
-                            {notesForClass.length > 0 && (
+                            {notes.length > 0 && (
                               <div>
                                 <h4 className="font-semibold text-sm mb-2">Notes</h4>
                                 <Table>
@@ -177,7 +175,7 @@ export default function AdminPageClient() {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {notesForClass.map(note => (
+                                    {notes.map(note => (
                                       <TableRow key={note.id}>
                                         <TableCell>{note.title}</TableCell>
                                         <TableCell>{note.description}</TableCell>
@@ -200,7 +198,7 @@ export default function AdminPageClient() {
                                 </Table>
                               </div>
                             )}
-                             {testsForClass.length > 0 && (
+                             {tests.length > 0 && (
                               <div className="mt-4">
                                 <h4 className="font-semibold text-sm mb-2">Subjective Tests</h4>
                                 <Table>
@@ -212,7 +210,7 @@ export default function AdminPageClient() {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {testsForClass.map(test => (
+                                    {tests.map(test => (
                                       <TableRow key={test.id}>
                                         <TableCell>{test.title}</TableCell>
                                         <TableCell>{test.description}</TableCell>
@@ -238,7 +236,7 @@ export default function AdminPageClient() {
                                 </Table>
                               </div>
                             )}
-                            {quizzesForClass.length > 0 && (
+                            {quizzes.length > 0 && (
                                <div>
                                 <h4 className="font-semibold text-sm mb-2 mt-4">Quizzes (MCQ)</h4>
                                 <Table>
@@ -251,7 +249,7 @@ export default function AdminPageClient() {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {quizzesForClass.map(quiz => (
+                                    {quizzes.map(quiz => (
                                       <TableRow key={quiz.id}>
                                         <TableCell>{quiz.title}</TableCell>
                                         <TableCell>{quiz.questions.length}</TableCell>

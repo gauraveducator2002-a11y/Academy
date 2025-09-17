@@ -54,11 +54,17 @@ export type SubjectContent = {
   quizzes: Quiz[];
   tests: Test[];
 };
-export type ContentData = Record<string, SubjectContent>;
+
+export type ClassContent = Record<string, SubjectContent>;
+export type ContentData = Record<string, ClassContent>;
 
 const initialPricing: Pricing = { notePriceInr: 830, quizPriceInr: 1245 };
-const initialContentData = subjects.reduce((acc, subject) => {
-    acc[subject.id] = { notes: [], quizzes: [], tests: [] };
+
+const initialContentData = classes.reduce((acc, c) => {
+    acc[c.id] = subjects.reduce((subAcc, s) => {
+        subAcc[s.id] = { notes: [], quizzes: [], tests: [] };
+        return subAcc;
+    }, {} as ClassContent);
     return acc;
 }, {} as ContentData);
 
@@ -137,14 +143,18 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const pricing = pricingData ?? initialPricing;
 
   useEffect(() => {
-    const newContentData = subjects.reduce((acc, subject) => {
-        acc[subject.id] = {
-            notes: notes.filter(n => n.subjectId === subject.id),
-            quizzes: quizzes.filter(q => q.subjectId === subject.id),
-            tests: tests.filter(t => t.subjectId === subject.id),
+    const newContentData = classes.reduce((classAcc, currentClass) => {
+      classAcc[currentClass.id] = subjects.reduce((subjectAcc, subject) => {
+        subjectAcc[subject.id] = {
+          notes: notes.filter(n => n.classId === currentClass.id && n.subjectId === subject.id),
+          quizzes: quizzes.filter(q => q.classId === currentClass.id && q.subjectId === subject.id),
+          tests: tests.filter(t => t.classId === currentClass.id && t.subjectId === subject.id),
         };
-        return acc;
+        return subjectAcc;
+      }, {} as ClassContent);
+      return classAcc;
     }, {} as ContentData);
+
     setContentData(newContentData);
   }, [notes, quizzes, tests]);
   

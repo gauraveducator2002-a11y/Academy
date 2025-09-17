@@ -3,7 +3,7 @@
 
 import { useContext } from 'react';
 import Link from 'next/link';
-import { ContentContext } from '@/context/content-context';
+import { ContentContext, Quiz } from '@/context/content-context';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { History } from 'lucide-react';
@@ -14,10 +14,14 @@ export default function QuizHistoryPage() {
 
   const sortedAttempts = [...quizAttempts].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-  const getQuizDetails = (quizId: string) => {
-    for (const subjectKey in contentData) {
-      const quiz = contentData[subjectKey].quizzes.find(q => q.id === quizId);
-      if (quiz) return quiz;
+  const getQuizDetails = (quizId: string): Quiz | null => {
+    for (const classKey in contentData) {
+        const classContent = contentData[classKey];
+        for (const subjectKey in classContent) {
+            const subjectContent = classContent[subjectKey];
+            const quiz = subjectContent.quizzes.find(q => q.id === quizId);
+            if (quiz) return quiz;
+        }
     }
     return null;
   };
