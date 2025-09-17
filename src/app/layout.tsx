@@ -470,7 +470,7 @@ function RootLayoutContent({
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: React.Node;
 }>) {
   return (
     <ContentProvider>
