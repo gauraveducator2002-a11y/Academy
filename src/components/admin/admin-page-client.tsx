@@ -89,7 +89,7 @@ export default function AdminPageClient() {
           subject: subjectInfo.name,
           class: classInfo.id,
           timestamp: new Date(),
-          fileUrl: 'fileUrl' in addedContent ? addedContent.fileUrl : null,
+          fileUrl: 'fileUrl' in addedContent ? addedContent.fileUrl : ('testFileUrl' in addedContent ? addedContent.testFileUrl : null),
         });
       }
     } catch (error) {

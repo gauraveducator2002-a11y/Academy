@@ -196,20 +196,18 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     await Promise.all(unreadNotifications.map(n => updateNotification(n.id, { read: true })));
   }, [notifications, updateNotification]);
 
-  const addContentCallback = useCallback(async (type: 'note' | 'quiz' | 'test', data: any) => {
+  const addContentCallback = async (type: 'note' | 'quiz' | 'test', data: any) => {
     let result;
-    const dataToSave = { ...data };
-
     try {
         switch (type) {
             case 'note':
-                result = await addNote(dataToSave);
+                result = await addNote(data);
                 break;
             case 'quiz':
-                result = await addQuiz(dataToSave);
+                result = await addQuiz(data);
                 break;
             case 'test':
-                result = await addTest(dataToSave);
+                result = await addTest(data);
                 break;
             default:
                 throw new Error('Invalid content type');
@@ -232,7 +230,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     }
 
     return result;
-  }, [addNote, addQuiz, addTest, addNotificationCallback]);
+  };
 
   const deleteContentCallback = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', id: string) => {
     let itemToDelete;
