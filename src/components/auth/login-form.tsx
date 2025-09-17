@@ -59,7 +59,6 @@ export function LoginForm() {
   });
 
   const watchedUsername = useWatch({ control: form.control, name: 'username' });
-  const isAdminLogin = watchedUsername.toLowerCase() === 'gauraveducator2002@gmail.com';
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -70,13 +69,13 @@ export function LoginForm() {
     const email = values.username.includes('@') ? values.username : `${values.username}@growth.academy`;
 
     try {
-      await signInWithEmailAndPassword(auth, email, values.password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, values.password);
       toast({
         title: 'Login Successful',
         description: "Welcome back! You're being redirected.",
       });
 
-      if (email.toLowerCase() === 'gauraveducator2002@gmail.com') {
+      if (userCredential.user.uid === 'O7hofZGIF2NyWHXp6HXN7OXBEXI3') {
         setTimeout(() => router.push('/admin'), 1000);
       } else {
         const student = studentUsers.find(u => u.username === values.username);
