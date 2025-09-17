@@ -168,7 +168,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   }, [addActivityFirestore]);
 
   const addTransactionCallback = useCallback(async (transaction: Omit<Transaction, 'id'>) => {
-    return addTransactionFirestore(transaction);
+    return addTransactionFirestore({ ...transaction, timestamp: new Date() });
   }, [addTransactionFirestore]);
 
   const addDiscountCodeCallback = useCallback(async (code: Omit<DiscountCode, 'id'>) => {
@@ -196,7 +196,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     await Promise.all(unreadNotifications.map(n => updateNotification(n.id, { read: true })));
   }, [notifications, updateNotification]);
 
-  const addContentCallback = async (type: 'note' | 'quiz' | 'test', data: any) => {
+  const addContentCallback = useCallback(async (type: 'note' | 'quiz' | 'test', data: any) => {
     let result;
     const dataToSave = { ...data };
 
@@ -232,7 +232,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     }
 
     return result;
-  };
+  }, [addNote, addQuiz, addTest, addNotificationCallback]);
 
   const deleteContentCallback = useCallback(async (subjectId: string, type: 'note' | 'quiz' | 'test', id: string) => {
     let itemToDelete;
