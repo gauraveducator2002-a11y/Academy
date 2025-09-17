@@ -80,6 +80,7 @@ type ContentContextType = {
   feedback: Feedback[];
   theme: Theme;
   notifications: Notification[];
+  loading: boolean;
   setTheme: (theme: Theme) => void;
   addContent: (type: 'note' | 'quiz' | 'test', data: any) => Promise<any>;
   deleteContent: (subjectId: string, type: 'note' | 'quiz' | 'test', id: string) => Promise<void>;
@@ -108,6 +109,7 @@ export const ContentContext = createContext<ContentContextType>({
   feedback: [],
   theme: 'light',
   notifications: [],
+  loading: true,
   setTheme: () => {},
   addContent: async () => {},
   deleteContent: async () => {},
@@ -126,38 +128,40 @@ export const ContentContext = createContext<ContentContextType>({
 });
 
 export const ContentProvider = ({ children }: { children: ReactNode }) => {
-  const { data: notes, addItem: addNote, deleteItem: deleteNote } = useFirestoreCollection('notes', NotesCollectionSchema);
-  const { data: quizzes, addItem: addQuiz, deleteItem: deleteQuiz } = useFirestoreCollection('quizzes', QuizzesCollectionSchema);
-  const { data: tests, addItem: addTest, deleteItem: deleteTest } = useFirestoreCollection('tests', TestsCollectionSchema);
-  const { data: recentActivity, addItem: addActivityFirestore } = useFirestoreCollection('recentActivity', ActivitiesCollectionSchema);
-  const { data: transactions, addItem: addTransactionFirestore } = useFirestoreCollection('transactions', TransactionsCollectionSchema);
-  const { data: discountCodes, addItem: addDiscountCodeFirestore, updateItem: updateDiscountCode, deleteItem: deleteDiscountCode } = useFirestoreCollection('discountCodes', DiscountCodesCollectionSchema);
-  const { data: pricingData, updateData: updatePricingData } = useFirestoreDocument('pricing', 'default', PricingSchema);
-  const { data: quizAttempts, addItem: addQuizAttemptFirestore } = useFirestoreCollection('quizAttempts', QuizAttemptsCollectionSchema);
-  const { data: studentUsers, addItem: addStudentUserFirestore } = useFirestoreCollection('studentUsers', StudentUsersCollectionSchema);
-  const { data: feedback, addItem: addFeedbackFirestore } = useFirestoreCollection('feedback', FeedbackCollectionSchema);
-  const { data: notifications, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', NotificationsCollectionSchema);
+  const { data: notes, loading: notesLoading, addItem: addNote, deleteItem: deleteNote } = useFirestoreCollection('notes', NotesCollectionSchema);
+  const { data: quizzes, loading: quizzesLoading, addItem: addQuiz, deleteItem: deleteQuiz } = useFirestoreCollection('quizzes', QuizzesCollectionSchema);
+  const { data: tests, loading: testsLoading, addItem: addTest, deleteItem: deleteTest } = useFirestoreCollection('tests', TestsCollectionSchema);
+  const { data: recentActivity, loading: activityLoading, addItem: addActivityFirestore } = useFirestoreCollection('recentActivity', ActivitiesCollectionSchema);
+  const { data: transactions, loading: transactionsLoading, addItem: addTransactionFirestore } = useFirestoreCollection('transactions', TransactionsCollectionSchema);
+  const { data: discountCodes, loading: codesLoading, addItem: addDiscountCodeFirestore, updateItem: updateDiscountCode, deleteItem: deleteDiscountCode } = useFirestoreCollection('discountCodes', DiscountCodesCollectionSchema);
+  const { data: pricingData, loading: pricingLoading, updateData: updatePricingData } = useFirestoreDocument('pricing', 'default', PricingSchema);
+  const { data: quizAttempts, loading: attemptsLoading, addItem: addQuizAttemptFirestore } = useFirestoreCollection('quizAttempts', QuizAttemptsCollectionSchema);
+  const { data: studentUsers, loading: usersLoading, addItem: addStudentUserFirestore } = useFirestoreCollection('studentUsers', StudentUsersCollectionSchema);
+  const { data: feedback, loading: feedbackLoading, addItem: addFeedbackFirestore } = useFirestoreCollection('feedback', FeedbackCollectionSchema);
+  const { data: notifications, loading: notificationsLoading, addItem: addNotificationFirestore, updateItem: updateNotification } = useFirestoreCollection('notifications', NotificationsCollectionSchema);
   const [theme, setTheme] = useTheme('light', 'theme');
   const [contentData, setContentData] = useState<ContentData>(initialContentData);
+
+  const loading = notesLoading || quizzesLoading || testsLoading || activityLoading || transactionsLoading || codesLoading || pricingLoading || attemptsLoading || usersLoading || feedbackLoading || notificationsLoading;
   
   const pricing = pricingData ?? initialPricing;
 
   useEffect(() => {
-    const newContentData = classes.reduce((classAcc, currentClass) => {
-        const classContent: ClassContent = subjects.reduce((subjectAcc, subject) => {
-            subjectAcc[subject.id] = {
-                notes: notes.filter(n => n.classId === currentClass.id && n.subjectId === subject.id),
-                quizzes: quizzes.filter(q => q.classId === currentClass.id && q.subjectId === subject.id),
-                tests: tests.filter(t => t.classId === currentClass.id && t.subjectId === subject.id),
-            };
-            return subjectAcc;
-        }, {} as ClassContent);
-        classAcc[currentClass.id] = classContent;
-        return classAcc;
-    }, {} as ContentData);
-
-    setContentData(newContentData);
-}, [notes, quizzes, tests]);
+    if (!loading) {
+      const newContentData = classes.reduce((classAcc, currentClass) => {
+          classAcc[currentClass.id] = subjects.reduce((subjectAcc, subject) => {
+              subjectAcc[subject.id] = {
+                  notes: notes.filter(n => n.classId === currentClass.id && n.subjectId === subject.id),
+                  quizzes: quizzes.filter(q => q.classId === currentClass.id && q.subjectId === subject.id),
+                  tests: tests.filter(t => t.classId === currentClass.id && t.subjectId === subject.id),
+              };
+              return subjectAcc;
+          }, {} as ClassContent);
+          return classAcc;
+      }, {} as ContentData);
+      setContentData(newContentData);
+    }
+  }, [loading, notes, quizzes, tests]);
   
   const addActivityCallback = useCallback(async (activity: Omit<Activity, 'id'>) => {
     return addActivityFirestore(activity);
@@ -325,6 +329,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     addNotification: addNotificationCallback,
     markNotificationAsRead: markNotificationAsReadCallback,
     markAllNotificationsAsRead: markAllNotificationsAsReadCallback,
+    loading,
   };
 
   return (
@@ -333,6 +338,3 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
     </ContentContext.Provider>
   );
 };
-
-    
-    

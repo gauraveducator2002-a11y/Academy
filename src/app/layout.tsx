@@ -18,6 +18,7 @@ import {
   Bell,
   BellDot,
   History,
+  Loader2,
 } from 'lucide-react';
 import { getAuth, sendPasswordResetEmail, onAuthStateChanged, User, signOut } from 'firebase/auth';
 import { app } from '@/lib/firebase';
@@ -118,7 +119,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLogoutFeedbackOpen, setIsLogoutFeedbackOpen] = useState(false);
   const [hasMounted, setHasMounted] = useState(false);
-  const { addFeedback } = useContext(ContentContext);
+  const { addFeedback, loading } = useContext(ContentContext);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [userId, setUserId] = useState<string | undefined>(undefined);
 
@@ -251,6 +252,14 @@ function AppContent({ children }: { children: React.ReactNode }) {
   
   if (isAuthPage) {
     return <>{children}</>;
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
   }
   
   return (

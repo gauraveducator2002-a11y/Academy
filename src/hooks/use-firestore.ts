@@ -66,6 +66,7 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setLoading(true);
     const q = query(collection(db, collectionName));
     const unsubscribe = onSnapshot(
       q,
