@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -58,7 +59,7 @@ export function LoginForm() {
   });
 
   const watchedUsername = useWatch({ control: form.control, name: 'username' });
-  const isAdminLogin = watchedUsername === 'gauraveducator' || watchedUsername === 'gauraveducator2002@gmail.com';
+  const isAdminLogin = watchedUsername.toLowerCase() === 'gauraveducator2002@gmail.com';
 
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -75,7 +76,7 @@ export function LoginForm() {
         description: "Welcome back! You're being redirected.",
       });
 
-      if (isAdminLogin) {
+      if (email.toLowerCase() === 'gauraveducator2002@gmail.com') {
         setTimeout(() => router.push('/admin'), 1000);
       } else {
         const student = studentUsers.find(u => u.username === values.username);

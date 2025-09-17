@@ -177,7 +177,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     }
   }, [user, remoteSession, hasMounted]);
   
-  const isAdmin = user?.email === 'gauraveducator2002@gmail.com';
+  const isAdmin = user?.email?.toLowerCase() === 'gauraveducator2002@gmail.com';
 
   const handleAdminLogout = useCallback(() => {
     endUserSession().then(() => {
