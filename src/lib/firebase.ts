@@ -19,7 +19,6 @@ export const db = getFirestore(app);
 
 // Initialize App Check
 if (typeof window !== 'undefined') {
-  (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = true;
   initializeAppCheck(app, {
     provider: new ReCaptchaV3Provider('6Ld3cAEqAAAAAAV8xY-3H4A-0a-48wR-4-d4R1E_'),
     isTokenAutoRefreshEnabled: true
