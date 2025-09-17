@@ -4,11 +4,11 @@ import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
   "projectId": "studio-3178617184-5b71f",
-  "appId": "1:275992984928:web:7990145b2b3874315f6990",
+  "appId": "1:256812077095:web:7990145b2b3874315f6990",
   "storageBucket": "studio-3178617184-5b71f.appspot.com",
-  "apiKey": "AIzaSyB-6e_U3pC0b8-406L9xZ9TzZ_5yJ8xL8",
+  "apiKey": "AIzaSyAndd0ARLFx2Q5QrIdr6ITGHiltAogvbt4",
   "authDomain": "studio-3178617184-5b71f.firebaseapp.com",
-  "messagingSenderId": "275992984928"
+  "messagingSenderId": "256812077095"
 };
 
 // Initialize Firebase
