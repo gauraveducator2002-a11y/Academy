@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm, useWatch } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -17,13 +17,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useState } from 'react';
@@ -32,7 +25,6 @@ import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
 import { app } from '@/lib/firebase';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { classes } from '@/lib/data';
 import { ContentContext } from '@/context/content-context';
 
 const auth = getAuth(app);
@@ -58,9 +50,6 @@ export function LoginForm() {
     },
   });
 
-  const watchedUsername = useWatch({ control: form.control, name: 'username' });
-
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     setAuthError(null);
@@ -78,7 +67,7 @@ export function LoginForm() {
       if (userCredential.user.uid === 'O7hofZGIF2NyWHXp6HXN7OXBEXI3') {
         setTimeout(() => router.push('/admin'), 1000);
       } else {
-        const student = studentUsers.find(u => u.username === values.username);
+        const student = studentUsers.find(u => u.email === email);
         const redirectPath = student ? `/class/${student.classId}` : '/dashboard';
         setTimeout(() => router.push(redirectPath), 1000);
       }

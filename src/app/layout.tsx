@@ -119,7 +119,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLogoutFeedbackOpen, setIsLogoutFeedbackOpen] = useState(false);
-  const { addFeedback, loading } = useContext(ContentContext);
+  const { addFeedback } = useContext(ContentContext);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [userId, setUserId] = useState<string | undefined>(undefined);
   const hasMounted = useHasMounted();
@@ -263,7 +263,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (loading && !user) {
+  if (!user) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
