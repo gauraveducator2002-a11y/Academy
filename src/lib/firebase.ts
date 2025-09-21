@@ -17,7 +17,7 @@ const firebaseConfig = {
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
-// Initialize App Check
+// Initialize App Check only on the client side
 if (typeof window !== 'undefined') {
   initializeAppCheck(app, {
     provider: new ReCaptchaV3Provider('6Ld3cAEqAAAAAAV8xY-3H4A-0a-48wR-4-d4R1E_'),
