@@ -20,6 +20,7 @@ import type { Note, Quiz, Test } from '@/context/content-context';
 import { FeesDialog } from '@/components/student/fees-dialog';
 import Link from 'next/link';
 import { format } from 'date-fns';
+import { useHasMounted } from '@/hooks/use-has-mounted';
 
 const downloadFile = (url: string, title: string) => {
   const link = document.createElement('a');
@@ -44,11 +45,7 @@ export default function SubjectPage() {
 
   const [isFeesDialogOpen, setIsFeesDialogOpen] = useState(false);
   const [selectedContent, setSelectedContent] = useState<Note | Quiz | Test | null>(null);
-  const [hasMounted, setHasMounted] = useState(false);
-
-  useEffect(() => {
-    setHasMounted(true);
-  }, []);
+  const hasMounted = useHasMounted();
   
   if (!currentClass || !currentSubject) {
     notFound();
@@ -110,12 +107,16 @@ export default function SubjectPage() {
   if (!hasMounted) {
     return (
         <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tight font-headline">
-                {currentClass?.name} - {currentSubject?.name}
-            </h1>
-            <p className="text-muted-foreground">
-                Find all your learning materials here.
-            </p>
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight font-headline">
+                    {currentClass?.name} - {currentSubject?.name}
+                </h1>
+                <p className="text-muted-foreground">
+                    Find all your learning materials here.
+                </p>
+              </div>
+            </div>
             <div className="flex items-center justify-center pt-16">
                 <Loader2 className="h-12 w-12 animate-spin" />
             </div>
