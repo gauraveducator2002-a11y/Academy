@@ -56,6 +56,7 @@ import { cn } from '@/lib/utils';
 import { SessionExpiredDialog } from '@/components/auth/session-expired-dialog';
 import { v4 as uuidv4 } from 'uuid';
 import { UserSessionSchema } from '@/context/content-context';
+import { useHasMounted } from '@/hooks/use-has-mounted';
 
 
 const auth = getAuth(app);
@@ -118,10 +119,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLogoutFeedbackOpen, setIsLogoutFeedbackOpen] = useState(false);
-  const [hasMounted, setHasMounted] = useState(false);
   const { addFeedback, loading } = useContext(ContentContext);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [userId, setUserId] = useState<string | undefined>(undefined);
+  const hasMounted = useHasMounted();
 
   // Session management logic
   const { data: remoteSession, updateData: updateRemoteSession, deleteDoc: deleteRemoteSession } = useFirestoreDocument('sessions', userId, UserSessionSchema);
@@ -145,10 +146,10 @@ function AppContent({ children }: { children: React.ReactNode }) {
   }, [deleteRemoteSession, userId]);
 
  useEffect(() => {
+    if (!hasMounted) return; // Wait for client-side mount
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setUserId(currentUser?.uid);
-      setHasMounted(true);
 
       if (currentUser) {
         // User is logged in
@@ -166,7 +167,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
     });
 
     return () => unsubscribe();
-  }, [pathname, router, startUserSession]);
+  }, [hasMounted, pathname, router, startUserSession]);
 
   useEffect(() => {
     if (hasMounted && user && remoteSession) {
@@ -248,13 +249,21 @@ function AppContent({ children }: { children: React.ReactNode }) {
     router.push('/');
   };
   
+  if (!hasMounted) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   const isAuthPage = pathname ? ['/', '/forgot-password'].includes(pathname) : false;
   
   if (isAuthPage) {
     return <>{children}</>;
   }
 
-  if (loading || !pathname) {
+  if (loading && !user) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -372,7 +381,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6">
           <div className="flex items-center gap-2">
             <div className="flex-1">
-                {hasMounted && <SidebarTrigger className="md:hidden" />}
+                <SidebarTrigger className="md:hidden" />
             </div>
             <form>
                 <div className="relative">
@@ -388,43 +397,39 @@ function AppContent({ children }: { children: React.ReactNode }) {
             </form>
           </div>
           <div className="flex items-center gap-2">
-             {hasMounted && (
-               <>
-                {!isAdmin && <NotificationCenter />}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="flex items-center gap-2 rounded-full p-1 focus-visible:ring-0"
-                    >
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage
-                          src="https://picsum.photos/seed/user/100/100"
-                          alt="User Avatar"
-                          data-ai-hint="person avatar"
-                        />
-                        <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
-                      </Avatar>
-                      <span className="hidden text-sm font-medium md:inline">
-                        {user?.email || 'User'}
-                      </span>
-                      <ChevronDown className="hidden h-4 w-4 md:inline" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                        <Link href="/settings">Settings</Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleResetPassword}>Reset Password</DropdownMenuItem>
-                    <DropdownMenuItem disabled>Support</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={handleLogoutClick}>Logout</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </>
-            )}
+            {!isAdmin && <NotificationCenter />}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="flex items-center gap-2 rounded-full p-1 focus-visible:ring-0"
+                >
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage
+                      src="https://picsum.photos/seed/user/100/100"
+                      alt="User Avatar"
+                      data-ai-hint="person avatar"
+                    />
+                    <AvatarFallback>{user?.email?.charAt(0).toUpperCase() || 'U'}</AvatarFallback>
+                  </Avatar>
+                  <span className="hidden text-sm font-medium md:inline">
+                    {user?.email || 'User'}
+                  </span>
+                  <ChevronDown className="hidden h-4 w-4 md:inline" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem asChild>
+                    <Link href="/settings">Settings</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleResetPassword}>Reset Password</DropdownMenuItem>
+                <DropdownMenuItem disabled>Support</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogoutClick}>Logout</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
         <main className="flex-1 overflow-auto p-4 sm:p-6">{children}</main>
@@ -470,7 +475,7 @@ function RootLayoutContent({
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.Node;
+  children: React.ReactNode;
 }>) {
   return (
     <ContentProvider>
@@ -478,5 +483,3 @@ export default function RootLayout({
     </ContentProvider>
   );
 }
-
-    
