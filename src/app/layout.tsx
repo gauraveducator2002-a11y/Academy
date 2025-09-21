@@ -3,7 +3,7 @@
 
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
-import { ContentProvider, ContentContext, type Notification } from '@/context/content-context';
+import { ContentProvider, ContentContext, type Notification, UserSessionSchema } from '@/context/content-context';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -55,12 +55,9 @@ import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { SessionExpiredDialog } from '@/components/auth/session-expired-dialog';
 import { v4 as uuidv4 } from 'uuid';
-import { UserSessionSchema } from '@/context/content-context';
 import { useHasMounted } from '@/hooks/use-has-mounted';
 
-
 const auth = getAuth(app);
-
 
 function NotificationCenter() {
   const { notifications, markNotificationAsRead, markAllNotificationsAsRead } = useContext(ContentContext);
@@ -112,7 +109,7 @@ function NotificationCenter() {
 }
 
 
-function AppContent({ children }: { children: React.ReactNode }) {
+function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
@@ -123,8 +120,8 @@ function AppContent({ children }: { children: React.ReactNode }) {
   const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [userId, setUserId] = useState<string | undefined>(undefined);
   const hasMounted = useHasMounted();
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Session management logic
   const { data: remoteSession, updateData: updateRemoteSession, deleteDoc: deleteRemoteSession } = useFirestoreDocument('sessions', userId, UserSessionSchema);
 
   const startUserSession = useCallback(async (userId: string) => {
@@ -145,29 +142,23 @@ function AppContent({ children }: { children: React.ReactNode }) {
     }
   }, [deleteRemoteSession, userId]);
 
- useEffect(() => {
-    if (!hasMounted) return; // Wait for client-side mount
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setUserId(currentUser?.uid);
+      setIsLoading(false);
 
-      if (currentUser) {
-        // User is logged in
-        const localSessionId = localStorage.getItem('session_id');
-        if (!localSessionId) {
-          // This is a fresh login, start a new session.
-          startUserSession(currentUser.uid);
-        }
-      } else {
-        // User is logged out
-        if (pathname && !['/', '/forgot-password'].includes(pathname)) {
-          router.push('/');
-        }
+      if (!currentUser && pathname && !['/', '/forgot-password'].includes(pathname)) {
+        router.push('/');
+      } else if (currentUser) {
+         const localSessionId = localStorage.getItem('session_id');
+         if (!localSessionId) {
+            startUserSession(currentUser.uid);
+         }
       }
     });
-
     return () => unsubscribe();
-  }, [hasMounted, pathname, router, startUserSession]);
+  }, [pathname, router, startUserSession]);
 
   useEffect(() => {
     if (hasMounted && user && remoteSession) {
@@ -248,15 +239,15 @@ function AppContent({ children }: { children: React.ReactNode }) {
     await signOut(auth); 
     router.push('/');
   };
-  
-  if (!hasMounted) {
+
+  if (!hasMounted || isLoading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
     );
   }
-
+  
   const isAuthPage = pathname ? ['/', '/forgot-password'].includes(pathname) : false;
   
   if (isAuthPage) {
@@ -264,7 +255,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) {
-    return (
+     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
       </div>
@@ -451,35 +442,26 @@ function AppContent({ children }: { children: React.ReactNode }) {
 }
 
 
-function RootLayoutContent({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  const { theme } = useContext(ContentContext);
-  return (
-    <html lang="en" className={theme} suppressHydrationWarning>
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
-      </head>
-      <body className="font-body antialiased">
-        <AppContent>{children}</AppContent>
-        <Toaster />
-      </body>
-    </html>
-  );
-}
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const { theme } = useContext(ContentContext);
+
   return (
     <ContentProvider>
-      <RootLayoutContent>{children}</RootLayoutContent>
+        <html lang="en" suppressHydrationWarning>
+            <head>
+                <link rel="preconnect" href="https://fonts.googleapis.com" />
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+                <link href="https://fonts.googleapis.com/css2?family=PT+Sans:wght@400;700&display=swap" rel="stylesheet" />
+            </head>
+            <body className="font-body antialiased">
+                <AppShell>{children}</AppShell>
+                <Toaster />
+            </body>
+        </html>
     </ContentProvider>
   );
 }
