@@ -159,7 +159,7 @@ function AppContent({ children }: { children: React.ReactNode }) {
         }
       } else {
         // User is logged out
-        if (!['/', '/forgot-password'].includes(pathname)) {
+        if (pathname && !['/', '/forgot-password'].includes(pathname)) {
           router.push('/');
         }
       }
@@ -248,13 +248,13 @@ function AppContent({ children }: { children: React.ReactNode }) {
     router.push('/');
   };
   
-  const isAuthPage = ['/', '/forgot-password'].includes(pathname);
+  const isAuthPage = pathname ? ['/', '/forgot-password'].includes(pathname) : false;
   
   if (isAuthPage) {
     return <>{children}</>;
   }
 
-  if (loading) {
+  if (loading || !pathname) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -478,3 +478,5 @@ export default function RootLayout({
     </ContentProvider>
   );
 }
+
+    
