@@ -239,7 +239,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.push('/');
   };
 
-  if (!hasMounted) {
+  if (!hasMounted || isLoading) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -253,14 +253,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (isLoading) {
-     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-background">
-        <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
   return (
     <SidebarProvider>
       <Sidebar>
