@@ -146,18 +146,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       setUser(currentUser);
       setUserId(currentUser?.uid);
       setIsLoading(false);
-
-      if (hasMounted && !currentUser && pathname && !['/', '/forgot-password'].includes(pathname)) {
-        router.push('/');
-      } else if (hasMounted && currentUser) {
-         const localSessionId = localStorage.getItem('session_id');
-         if (!localSessionId) {
-            startUserSession(currentUser.uid);
-         }
-      }
     });
     return () => unsubscribe();
-  }, [pathname, router, startUserSession, hasMounted]);
+  }, []);
+
+  useEffect(() => {
+    if (hasMounted && !isLoading) {
+      if (!user && pathname && !['/', '/forgot-password'].includes(pathname)) {
+        router.push('/');
+      } else if (user) {
+        const localSessionId = localStorage.getItem('session_id');
+        if (!localSessionId) {
+           startUserSession(user.uid);
+        }
+      }
+    }
+  }, [hasMounted, isLoading, user, pathname, router, startUserSession]);
 
   useEffect(() => {
     if (hasMounted && user && remoteSession) {
@@ -239,7 +243,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.push('/');
   };
 
-  if (!hasMounted || isLoading) {
+  if (!hasMounted) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
@@ -249,7 +253,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   
   const isAuthPage = pathname ? ['/', '/forgot-password'].includes(pathname) : false;
   
-  if (isAuthPage) {
+  if (isAuthPage || isLoading) {
     return <>{children}</>;
   }
 
