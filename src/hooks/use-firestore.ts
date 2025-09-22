@@ -23,10 +23,12 @@ const parseFirestoreData = (data: any): any => {
   if (typeof data === 'object' && !Array.isArray(data) && data !== null) {
     const newData: { [key: string]: any } = {};
     for (const key in data) {
-      if (Object.prototype.hasOwnProperty.call(data, key) && data[key] !== undefined && data[key] !== null) {
-        newData[key] = parseFirestoreData(data[key]);
-      } else {
-        newData[key] = data[key];
+      if (Object.prototype.hasOwnProperty.call(data, key)) {
+         if (data[key] !== undefined && data[key] !== null) {
+            newData[key] = parseFirestoreData(data[key]);
+         } else {
+            newData[key] = data[key];
+         }
       }
     }
     return newData;
@@ -75,13 +77,14 @@ export function useFirestoreCollection<T extends z.ZodTypeAny>(
       (querySnapshot) => {
         const items: any[] = [];
         querySnapshot.forEach((doc) => {
-          items.push(parseFirestoreData({ id: doc.id, ...doc.data() }));
+          items.push({ id: doc.id, ...doc.data() });
         });
+        const parsedItems = parseFirestoreData(items);
         try {
-          if (items.length > 0 && 'timestamp' in items[0] && items[0].timestamp instanceof Date) {
-            items.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+          if (parsedItems.length > 0 && 'timestamp' in parsedItems[0] && parsedItems[0].timestamp instanceof Date) {
+            parsedItems.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
           }
-          const validatedData = schema.parse(items);
+          const validatedData = schema.parse(parsedItems);
           setData(validatedData);
         } catch (error) {
           console.error(`Zod validation failed for ${collectionName}:`, error);

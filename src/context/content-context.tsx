@@ -147,7 +147,7 @@ export const ContentProvider = ({ children }: { children: ReactNode }) => {
   const pricing = pricingData ?? initialPricing;
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && notes && quizzes && tests) {
       const newContentData = classes.reduce((classAcc, currentClass) => {
           classAcc[currentClass.id] = subjects.reduce((subjectAcc, subject) => {
               subjectAcc[subject.id] = {
