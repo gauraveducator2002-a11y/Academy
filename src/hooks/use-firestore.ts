@@ -23,8 +23,10 @@ const parseFirestoreData = (data: any): any => {
   if (typeof data === 'object' && !Array.isArray(data) && data !== null) {
     const newData: { [key: string]: any } = {};
     for (const key in data) {
-      if (Object.prototype.hasOwnProperty.call(data, key)) {
+      if (Object.prototype.hasOwnProperty.call(data, key) && data[key] !== undefined && data[key] !== null) {
         newData[key] = parseFirestoreData(data[key]);
+      } else {
+        newData[key] = data[key];
       }
     }
     return newData;
